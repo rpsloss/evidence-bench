@@ -1,6 +1,12 @@
 import { useMemo, useState } from "react";
 import catalogFile from "../data/catalog.json";
 import {
+  FAMILIES,
+  allFamiliesReviewed,
+  reviewForFamily,
+  upsertFamilyReview,
+} from "../lib/familyReview.mjs";
+import {
   deriveFipsAoFinding,
   effectiveObjectives,
   evidenceCoversAo,
@@ -10,24 +16,7 @@ import {
   type Finding,
 } from "../lib/rollup.mjs";
 import { useAssessment } from "../lib/store";
-import type { Determination, EvidenceItem } from "../types";
-
-const FAMILIES: { id: string; name: string }[] = [
-  { id: "AC", name: "Access Control" },
-  { id: "AT", name: "Awareness and Training" },
-  { id: "AU", name: "Audit and Accountability" },
-  { id: "CM", name: "Configuration Management" },
-  { id: "IA", name: "Identification and Authentication" },
-  { id: "IR", name: "Incident Response" },
-  { id: "MA", name: "Maintenance" },
-  { id: "MP", name: "Media Protection" },
-  { id: "PS", name: "Personnel Security" },
-  { id: "PE", name: "Physical Protection" },
-  { id: "RA", name: "Risk Assessment" },
-  { id: "CA", name: "Security Assessment" },
-  { id: "SC", name: "System and Communications Protection" },
-  { id: "SI", name: "System and Information Integrity" },
-];
+import type { Determination, EvidenceItem, FamilyReview } from "../types";
 
 const FINDING_OPTIONS: { value: Finding; label: string }[] = [
   { value: "not-reviewed", label: "Unanswered" },
@@ -159,10 +148,12 @@ export default function Requirements() {
   const [family, setFamily] = useState("AC");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [naError, setNaError] = useState<string | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   const familyReqs = useMemo(() => CATALOG.filter((row) => row.family === family), [family]);
   const selected = familyReqs.find((row) => row.reqId === selectedId) ?? null;
   const familyMeta = FAMILIES.find((row) => row.id === family);
+  const familyReview = reviewForFamily(assessment.familyReviews, family);
 
   function derivedFinding(req: CatalogRequirement): Finding {
     return rollupRequirement(req, assessment.determinations[req.reqId], assessment.evidence, assessment.operationalPoas)
@@ -234,6 +225,31 @@ export default function Requirements() {
     patchDet(req, next);
   }
 
+  function patchFamilyReview(partial: Partial<FamilyReview>) {
+    setAssessment((a) => {
+      const prev = reviewForFamily(a.familyReviews, family);
+      const familyReviews = upsertFamilyReview(a.familyReviews, { ...prev, ...partial, family });
+      return {
+        ...a,
+        familyReviews,
+        prepMarkedAt: allFamiliesReviewed(familyReviews) ? a.prepMarkedAt : null,
+      };
+    });
+  }
+
+  function setFamilyReviewed(checked: boolean) {
+    const current = reviewForFamily(assessment.familyReviews, family);
+    if (checked && !current.reviewer.trim()) {
+      setReviewError("Enter a reviewer name before marking this family reviewed.");
+      return;
+    }
+    setReviewError(null);
+    patchFamilyReview({
+      reviewed: checked,
+      reviewedAt: checked ? new Date().toISOString() : null,
+    });
+  }
+
   function markRequirementNa(req: CatalogRequirement) {
     const current = currentDet(req);
     const next: Determination = {
@@ -261,22 +277,27 @@ export default function Requirements() {
       </p>
 
       <div className="family-tabs" role="tablist" aria-label="Requirement families">
-        {FAMILIES.map((row) => (
-          <button
-            key={row.id}
-            type="button"
-            role="tab"
-            aria-selected={family === row.id}
-            className={family === row.id ? "active" : ""}
-            onClick={() => {
-              setFamily(row.id);
-              setSelectedId(null);
-              setNaError(null);
-            }}
-          >
-            {row.id}
-          </button>
-        ))}
+        {FAMILIES.map((row) => {
+          const reviewed = reviewForFamily(assessment.familyReviews, row.id).reviewed;
+          return (
+            <button
+              key={row.id}
+              type="button"
+              role="tab"
+              aria-selected={family === row.id}
+              title={reviewed ? `${row.id} reviewed` : `${row.id} not reviewed`}
+              className={`${family === row.id ? "active" : ""}${reviewed ? " reviewed" : ""}`}
+              onClick={() => {
+                setFamily(row.id);
+                setSelectedId(null);
+                setNaError(null);
+                setReviewError(null);
+              }}
+            >
+              {row.id}
+            </button>
+          );
+        })}
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
@@ -329,6 +350,53 @@ export default function Requirements() {
           })}
         </tbody>
       </table>
+
+      <fieldset className="stack" disabled={readOnly} style={{ marginTop: 16 }}>
+        <div className="card">
+          <h2>
+            Consultant review · {family}
+          </h2>
+          <p>
+            Review flag only. It does not submit, affirm, or call SPRS. All 14 families must be reviewed before
+            Export-ready.
+          </p>
+          <label className="check" htmlFor={`reviewed-${family}`}>
+            <input
+              id={`reviewed-${family}`}
+              type="checkbox"
+              checked={familyReview.reviewed}
+              onChange={(e) => setFamilyReviewed(e.target.checked)}
+            />
+            Consultant reviewed this family
+          </label>
+          <label htmlFor={`reviewer-${family}`}>Reviewer name</label>
+          <input
+            id={`reviewer-${family}`}
+            value={familyReview.reviewer}
+            onChange={(e) => patchFamilyReview({ reviewer: e.target.value })}
+            placeholder="Consultant name (sample)"
+          />
+          <div className="muted" style={{ marginBottom: 12 }}>
+            {familyReview.reviewed && familyReview.reviewedAt
+              ? `Reviewed ${new Date(familyReview.reviewedAt).toLocaleString()}`
+              : "Not reviewed · no timestamp"}
+          </div>
+          <label htmlFor={`review-notes-${family}`}>Notes (unclassified)</label>
+          <textarea
+            id={`review-notes-${family}`}
+            value={familyReview.notes}
+            onChange={(e) => patchFamilyReview({ notes: e.target.value })}
+            placeholder="Optional QC notes. SAMPLE only."
+          />
+          {reviewError ? (
+            <div className="banner warn">
+              <div>
+                <strong>Review not marked.</strong> {reviewError}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </fieldset>
 
       {selected ? (
         <RequirementDetail

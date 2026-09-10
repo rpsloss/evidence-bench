@@ -131,6 +131,7 @@ export interface SspSection {
   generatedFrom: string;
 }
 
+/** Consultant QC flag per SPRS family. Does not submit or affirm. */
 export interface FamilyReview {
   family: string;
   reviewed: boolean;
@@ -181,6 +182,7 @@ export interface Assessment {
   operationalPoas: OperationalPoaItem[];
   ssp: SspSection[];
   familyReviews: FamilyReview[];
+  /** Local Export-ready stamp. Not a CMMC Status Date. Requires all 14 family reviews. */
   prepMarkedAt: string | null;
   schemaVersion: 1;
 }

@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import catalogFile from "../src/data/catalog.json" with { type: "json" };
 import catalogMeta from "../src/data/catalog.meta.json" with { type: "json" };
+import { gatedPrepMarkedAt, normalizeFamilyReviews } from "../src/lib/familyReview.mjs";
 import { poamGuard } from "../src/lib/poamGuard.mjs";
 import { effectiveObjectives, storedFinding, guardNaWrite, filter171AAoIds } from "../src/lib/rollup.mjs";
 import { derivePartialState } from "../src/lib/score.mjs";
@@ -245,8 +246,8 @@ export function validateAssessment(body) {
     poams: Array.isArray(raw.poams) ? raw.poams : [],
     operationalPoas: Array.isArray(raw.operationalPoas) ? raw.operationalPoas : [],
     ssp: Array.isArray(raw.ssp) ? raw.ssp : [],
-    familyReviews: Array.isArray(raw.familyReviews) ? raw.familyReviews : [],
-    prepMarkedAt: raw.prepMarkedAt ?? null,
+    familyReviews: normalizeFamilyReviews(raw.familyReviews),
+    prepMarkedAt: gatedPrepMarkedAt(raw.familyReviews, raw.prepMarkedAt),
     schemaVersion: 1,
   };
 
