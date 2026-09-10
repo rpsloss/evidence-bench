@@ -55,6 +55,14 @@ export function reportAssessmentAccess(action: "export" | "reload-sample", bytes
   }).catch(() => {});
 }
 
+function saveErrorMessage(data: unknown, fallback: string) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return fallback;
+  const rec = data as { error?: unknown; reqId?: unknown };
+  const err = typeof rec.error === "string" ? rec.error : fallback;
+  const reqId = typeof rec.reqId === "string" ? rec.reqId.trim() : "";
+  return reqId ? `${err} (${reqId})` : err;
+}
+
 function warningList(data: unknown): SaveWarning[] {
   if (!data || typeof data !== "object" || Array.isArray(data)) return [];
   const raw = (data as { warnings?: unknown }).warnings;
@@ -105,7 +113,7 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({ assessment: sample }),
         });
         const putData = await putRes.json().catch(() => ({}));
-        if (!putRes.ok) throw new Error("Could not save initial assessment (HTTP " + putRes.status + ").");
+        if (!putRes.ok) throw new Error(saveErrorMessage(putData, "Could not save initial assessment (HTTP " + putRes.status + ")."));
         if (cancelled) return;
         setWarnings(warningList(putData));
         setReadOnly(false);
@@ -138,7 +146,7 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
       })
         .then(async (r) => {
           const data = await r.json().catch(() => ({}));
-          if (!r.ok) throw new Error(typeof data.error === "string" ? data.error : "Save failed");
+          if (!r.ok) throw new Error(saveErrorMessage(data, "Save failed"));
           setLastSaved(new Date().toLocaleTimeString());
           setWarnings(warningList(data));
           setError(null);

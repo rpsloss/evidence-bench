@@ -135,6 +135,28 @@ export function applyNa(req, naJustification) {
   return { ok: true };
 }
 
+function overlayAllNa(req, determination) {
+  if (req?.partialCredit?.kind !== "fips") return false;
+  const overlay = determination?.fipsOverlay;
+  return Boolean(overlay && overlay.enc === "na" && overlay.fips === "na");
+}
+
+/** True when the row is (or would be) requirement-level N/A. */
+export function determinationWantsNa(req, determination) {
+  const det = determination && typeof determination === "object" ? determination : {};
+  if (det.finding === "na") return true;
+  const objectives = effectiveObjectives(req, det);
+  const aosNa = objectives.length > 0 && objectives.every((ao) => asFinding(ao.finding) === "na");
+  if (req?.partialCredit?.kind === "fips") return aosNa && overlayAllNa(req, det);
+  return aosNa;
+}
+
+/** Write-gate shared by the UI and PUT /api/assessment. */
+export function guardNaWrite(req, determination) {
+  if (!determinationWantsNa(req, determination)) return { ok: true };
+  return applyNa(req, determination?.naJustification);
+}
+
 function applyMetGates(req, determination, wouldBe, objectives, evidence, operationalPoas) {
   let finding = wouldBe;
   if (finding === "met" && !evidenceSupportsMet(objectives, evidence)) {

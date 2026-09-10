@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import catalogFile from "../data/catalog.json";
 import {
-  applyNa,
   deriveFipsAoFinding,
   effectiveObjectives,
+  guardNaWrite,
   rollupRequirement,
   type CatalogRequirement,
   type Finding,
@@ -100,23 +100,20 @@ function mergeDet(req: CatalogRequirement, current: Determination | undefined): 
   };
 }
 
-function wouldBeAllNa(objectives: { finding: Finding }[], overlay?: { enc: Finding; fips: Finding }) {
-  const aosNa = objectives.length > 0 && objectives.every((ao) => ao.finding === "na");
-  if (!overlay) return aosNa;
-  return aosNa && overlay.enc === "na" && overlay.fips === "na";
-}
-
 function FindingSelect({
   id,
   value,
   onChange,
   disabled,
+  allowNa = true,
 }: {
   id: string;
   value: Finding;
   onChange: (v: Finding) => void;
   disabled?: boolean;
+  allowNa?: boolean;
 }) {
+  const options = allowNa ? FINDING_OPTIONS : FINDING_OPTIONS.filter((opt) => opt.value !== "na");
   return (
     <select
       id={id}
@@ -125,7 +122,7 @@ function FindingSelect({
       disabled={disabled}
       onChange={(e) => onChange(e.target.value as Finding)}
     >
-      {FINDING_OPTIONS.map((opt) => (
+      {options.map((opt) => (
         <option key={opt.value} value={opt.value}>
           {opt.label}
         </option>
@@ -161,14 +158,6 @@ export default function Requirements() {
     return mergeDet(req, assessment.determinations[req.reqId]);
   }
 
-  function guardNa(req: CatalogRequirement, next: Determination) {
-    const overlay = req.partialCredit?.kind === "fips" ? next.fipsOverlay : undefined;
-    if (!wouldBeAllNa(next.objectives, overlay) && next.finding !== "na") return { ok: true as const };
-    const check = applyNa(req, next.naJustification);
-    if (!check.ok) return { ok: false as const, reject: check.reject };
-    return { ok: true as const };
-  }
-
   function setAoFinding(req: CatalogRequirement, aoId: string, finding: Finding) {
     const current = currentDet(req);
     const next: Determination = {
@@ -176,7 +165,7 @@ export default function Requirements() {
       finding: "not-reviewed",
       objectives: current.objectives.map((ao) => (ao.aoId === aoId ? { ...ao, finding } : ao)),
     };
-    const gated = guardNa(req, next);
+    const gated = guardNaWrite(req, next);
     if (!gated.ok) {
       setNaError(naMessage(gated.reject));
       return;
@@ -204,7 +193,7 @@ export default function Requirements() {
         ao.aoId.endsWith("[a]") || ao.aoId === "3.13.11[a]" ? { ...ao, finding: derived } : ao,
       ),
     };
-    const gated = guardNa(req, next);
+    const gated = guardNaWrite(req, next);
     if (!gated.ok) {
       setNaError(naMessage(gated.reject));
       return;
@@ -213,22 +202,29 @@ export default function Requirements() {
   }
 
   function setNaJustification(req: CatalogRequirement, naJustification: string) {
-    patchDet(req, { ...currentDet(req), naJustification });
+    const next = { ...currentDet(req), naJustification };
+    const gated = guardNaWrite(req, next);
+    if (!gated.ok) {
+      setNaError(naMessage(gated.reject));
+      return;
+    }
+    patchDet(req, next);
   }
 
   function markRequirementNa(req: CatalogRequirement) {
     const current = currentDet(req);
-    const check = applyNa(req, current.naJustification);
-    if (!check.ok) {
-      setNaError(naMessage(check.reject));
-      return;
-    }
-    patchDet(req, {
+    const next: Determination = {
       ...current,
       finding: "na",
       objectives: current.objectives.map((ao) => ({ ...ao, finding: "na" })),
       ...(req.partialCredit?.kind === "fips" ? { fipsOverlay: { enc: "na" as const, fips: "na" as const } } : {}),
-    });
+    };
+    const check = guardNaWrite(req, next);
+    if (!check.ok) {
+      setNaError(naMessage(check.reject));
+      return;
+    }
+    patchDet(req, next);
   }
 
   return (
@@ -392,6 +388,7 @@ function RequirementDetail({
                     id={`overlay-${overlay.key}`}
                     value={det.fipsOverlay?.[overlay.key] ?? "not-reviewed"}
                     onChange={(v) => onOverlay(req, overlay.key, v)}
+                    allowNa={req.naAllowed}
                   />
                 </div>
               </div>
@@ -414,15 +411,14 @@ function RequirementDetail({
             ) : null}
             {effectiveObjectives(req, det).map((ao) => (
               <div key={ao.aoId} className="ao-block">
-                <h3 className="mono">
-                  {ao.aoId} [{ao.letter}]
-                </h3>
+                <h3 className="mono">{ao.aoId}</h3>
                 <p className="muted">Determine if: {req.objectives.find((row) => row.aoId === ao.aoId)?.determineIf}</p>
                 <div className="finding-row">
                   <FindingSelect
                     id={`ao-${ao.aoId}`}
                     value={ao.finding}
                     onChange={(v) => onAoFinding(req, ao.aoId, v)}
+                    allowNa={req.naAllowed}
                   />
                   <div>
                     <label htmlFor={`rationale-${ao.aoId}`}>Rationale</label>

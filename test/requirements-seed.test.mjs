@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { validateAssessment } from "../server/assessment.mjs";
 import { buildHarborPrecision } from "../src/data/harbor-precision.mjs";
 import { combinedBlockers, topBlockers } from "../src/lib/blockers.mjs";
-import { applyNa, storedFinding } from "../src/lib/rollup.mjs";
+import { applyNa, guardNaWrite, storedFinding } from "../src/lib/rollup.mjs";
 import { scoreFromAssessment } from "../src/lib/score.mjs";
 import { scopeBlockers } from "../src/lib/scope.mjs";
 
@@ -25,6 +25,10 @@ function scoreOf(assessment) {
 
 function allAoFindings(det) {
   return (det?.objectives || []).map((ao) => ao.finding);
+}
+
+function okNaDraft() {
+  return { reqId: "3.13.5", naJustification: "" };
 }
 
 describe("Harbor determination seed + Requirements gates", () => {
@@ -114,6 +118,17 @@ describe("Harbor determination seed + Requirements gates", () => {
     assert.equal(missingHit.ok, false);
     assert.equal(missingHit.status, 400);
     assert.equal(missingHit.error, "na-justification-required");
+    assert.equal(missingHit.reqId, "3.13.5");
+
+    const cleared = guardNaWrite(req("3.13.5"), {
+      ...okNaDraft(),
+      finding: "na",
+      naJustification: "   ",
+      objectives: req("3.13.5").objectives.map((ao) => ({ aoId: ao.aoId, finding: "na" })),
+    });
+    assert.equal(cleared.ok, false);
+    assert.equal(cleared.reject, "na-justification-required");
+    assert.equal(guardNaWrite(req("3.1.1"), buildHarborPrecision().determinations["3.1.1"]).ok, true);
 
     const sspNa = buildHarborPrecision();
     sspNa.determinations["3.12.4"] = {
@@ -125,6 +140,7 @@ describe("Harbor determination seed + Requirements gates", () => {
     const sspHit = validateAssessment({ assessment: sspNa });
     assert.equal(sspHit.ok, false);
     assert.equal(sspHit.error, "na-not-allowed");
+    assert.equal(sspHit.reqId, "3.12.4");
 
     const okNa = buildHarborPrecision();
     okNa.determinations["3.13.5"] = {
@@ -136,6 +152,13 @@ describe("Harbor determination seed + Requirements gates", () => {
     const saved = validateAssessment({ assessment: okNa });
     assert.equal(saved.ok, true);
     assert.equal(saved.assessment.determinations["3.13.5"].naJustification.includes("publicly accessible"), true);
+    assert.equal(guardNaWrite(req("3.13.5"), saved.assessment.determinations["3.13.5"]).ok, true);
+
+    const ui = fs.readFileSync(path.join(root, "src/pages/Requirements.tsx"), "utf8");
+    assert.match(ui, /allowNa=\{req\.naAllowed\}/);
+    assert.equal(/\{ao\.aoId\} \[\{ao\.letter\}\]/.test(ui), false);
+    const api = fs.readFileSync(path.join(root, "server/index.mjs"), "utf8");
+    assert.match(api, /body\.reqId = checked\.reqId/);
   });
 
   it("flipping a MET-stub requirement to NOT MET changes the live score", () => {

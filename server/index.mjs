@@ -78,7 +78,9 @@ app.put("/api/assessment", (req, res) => {
   const checked = validateAssessment(req.body);
   if (!checked.ok) {
     logEvent("assessment.save.fail", { status: checked.status, errorClass: checked.errorClass });
-    res.status(checked.status).json({ error: checked.error, errorClass: checked.errorClass });
+    const body = { error: checked.error, errorClass: checked.errorClass };
+    if (typeof checked.reqId === "string" && checked.reqId) body.reqId = checked.reqId;
+    res.status(checked.status).json(body);
     return;
   }
   try {

@@ -110,6 +110,14 @@ export function applyNa(
   req: CatalogRequirement,
   naJustification?: string | null,
 ): { ok: true } | { ok: false; reject: NaReject };
+export function determinationWantsNa(
+  req: CatalogRequirement,
+  determination: Determination | null | undefined,
+): boolean;
+export function guardNaWrite(
+  req: CatalogRequirement,
+  determination: Determination | null | undefined,
+): { ok: true } | { ok: false; reject: NaReject };
 export function rollupRequirement(
   req: CatalogRequirement,
   determination: Determination | null | undefined,
