@@ -177,6 +177,22 @@ export interface AssessmentScore {
   computedAt: string;
 }
 
+export interface AffirmationChecklistItem {
+  id: string;
+  statement: string;
+  mustBeTrue: string;
+  satisfied: boolean;
+  href: string;
+  citation?: string;
+}
+
+export interface ExportPackage {
+  id: string;
+  createdAt: string;
+  watermark: "UNCLASSIFIED // SAMPLE // NOT A SPRS SUBMISSION";
+  files: { name: string; sha256: string; bytes: number }[];
+}
+
 export interface Assessment {
   id: string;
   standard: "NIST-SP-800-171-R2";

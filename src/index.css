@@ -223,6 +223,7 @@ tr.clickable:hover { background: var(--bg-elev-2); }
   align-items: start;
 }
 tr.selected { background: var(--bg-elev-2); }
+tr.unsatisfied td { color: #f0cfc8; }
 
 .list { display: grid; gap: 0.55rem; }
 .blocker-item { padding: 0.75rem 0.85rem; border: 1px solid var(--line); border-radius: 8px; background: var(--bg-elev-2); text-decoration: none; color: inherit; }

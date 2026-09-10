@@ -10,6 +10,7 @@ import { buildHarborPrecision } from "../src/data/harbor-precision.mjs";
 import catalogFile from "../src/data/catalog.json" with { type: "json" };
 import catalogMeta from "../src/data/catalog.meta.json" with { type: "json" };
 import { CatalogHashMismatch, scoreFromAssessment } from "../src/lib/score.mjs";
+import { emitSampleExport, sendExportResponse } from "./emitApi.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -136,6 +137,30 @@ export function createApp(options = {}) {
       logEvent("assessment.save.fail", { status: 500, errorClass: errorClass(err) });
       res.status(500).json({ error: "assessment-save-failed", errorClass: errorClass(err) });
     }
+  });
+
+  app.post("/api/export", (_req, res) => {
+    const loaded = loadPackage(assessmentPath);
+    if (!loaded.ok) {
+      logEvent("assessment.load.fail", { status: 500, errorClass: loaded.errorClass });
+      res.status(500).json({ error: "assessment-unreadable", errorClass: loaded.errorClass });
+      return;
+    }
+    if (loaded.missing || !loaded.package) {
+      logEvent("export.refused", { status: 400, errorClass: "assessment-missing" });
+      sendExportResponse(res, { ok: false, error: "assessment-missing", checklist: [], exportReady: false });
+      return;
+    }
+    const pack = emitSampleExport(loaded.package);
+    if (!pack.ok) {
+      const status = pack.error === "not-reviewed" ? 409 : 400;
+      logEvent("export.refused", { status, errorClass: pack.error || "export-refused" });
+      sendExportResponse(res, pack);
+      return;
+    }
+    logEvent("export.ok", { status: 200, bytes: pack.zip.length });
+    appendAudit(auditPath, { action: "export", outcome: "ok", bytesIn: 0, bytesOut: pack.zip.length });
+    sendExportResponse(res, pack);
   });
 
   app.post("/api/seed", (_req, res) => {
