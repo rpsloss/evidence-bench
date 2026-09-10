@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { scopeBlockers } from "../lib/scope.mjs";
-import { generateSspOutline, sspWarnings } from "../lib/sspGenerate.mjs";
+import { generateSspOutline, scopeGraphHash, sspWarnings } from "../lib/sspGenerate.mjs";
 import { useAssessment } from "../lib/store";
 import type { SspSection } from "../types";
 
@@ -52,14 +52,31 @@ export default function Ssp() {
   const graphWarn = graph.filter((row) => row.severity !== "blocker");
 
   function generate() {
+    if (!empty) {
+      const ok = window.confirm(
+        "Regenerate the SSP outline from current scope, assets, and flows? This replaces all section bodies, including the 3.12.4 gate and edited requirement stubs.",
+      );
+      if (!ok) return;
+    }
     setAssessment((a) => ({ ...a, ssp: generateSspOutline(a) }));
   }
 
   function patchBody(key: string, body: string) {
-    setAssessment((a) => ({
-      ...a,
-      ssp: a.ssp.map((row) => (row.key === key ? { ...row, body } : row)),
-    }));
+    setAssessment((a) => {
+      const hash = scopeGraphHash(a);
+      const scopeRelated = !isReqKey(key);
+      return {
+        ...a,
+        ssp: a.ssp.map((row) => {
+          if (row.key === key) return { ...row, body, generatedFrom: hash };
+          // Editing a core/scope stub also acknowledges the current graph on boundary.
+          if (scopeRelated && row.key === "boundary" && key !== "boundary") {
+            return { ...row, generatedFrom: hash };
+          }
+          return row;
+        }),
+      };
+    });
   }
 
   return (

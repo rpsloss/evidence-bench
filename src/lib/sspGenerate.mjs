@@ -199,7 +199,7 @@ function ssp3124Body(assessment, det) {
     "CA.L2-3.12.4 System Security Plan (SAMPLE).",
     "This SSP describes the Assessment Scope, environment of operation, CUI flows, and how 800-171 Rev 2 requirements are implemented (stubs).",
     str(scope.narrative).trim() || "(no boundary narrative)",
-    stub || "Harbor Precision (fictional) SSP body.",
+    stub || "No implementation stub yet.",
     "Emptying this body marks the assessment incomplete (32 CFR 170.24). Other sections are not a substitute while this section exists.",
     SAMPLE,
   ].join("\n");
@@ -270,7 +270,8 @@ export function sspWarnings(assessment) {
       href: "/ssp",
     });
   }
-  if (sections.length && sections.some((row) => sspSectionStale(row, hash))) {
+  // Boundary only: editing that stub (stamping generatedFrom) dismisses without wiping req:*.
+  if (boundary && sspSectionStale(boundary, hash)) {
     warnings.push({
       id: "ssp-stale",
       severity: "warning",

@@ -150,11 +150,48 @@ describe("SSP outline + 3.12.4 incomplete gate", () => {
     assert.match(hit.detail, /SSP boundary stub is stale; regenerate or edit/);
     assert.notEqual(scopeGraphHash(seed), hash);
 
+    const nextHash = scopeGraphHash(seed);
+    const reqBefore = seed.ssp.find((row) => row.key === "req:3.1.1");
+    seed.ssp = seed.ssp.map((row) =>
+      row.key === "req:3.1.1" ? { ...row, body: `${row.body}\n(edit)`, generatedFrom: nextHash } : row,
+    );
+    assert.ok(sspWarnings(seed).some((row) => row.id === "ssp-stale"));
+
+    seed.ssp = seed.ssp.map((row) =>
+      row.key === "boundary" ? { ...row, body: "Acknowledged updated enclave (SAMPLE).", generatedFrom: nextHash } : row,
+    );
+    assert.equal(
+      sspWarnings(seed).some((row) => row.id === "ssp-stale"),
+      false,
+    );
+    assert.equal(seed.ssp.find((row) => row.key === "req:3.1.1").body, reqBefore.body + "\n(edit)");
+
     seed.ssp = generateSspOutline(seed);
     assert.equal(
       sspWarnings(seed).some((row) => row.id === "ssp-stale"),
       false,
     );
+  });
+
+  it("uses a generic 3.12.4 fallback, not Harbor-specific copy", () => {
+    const src = fs.readFileSync(path.join(root, "src/lib/sspGenerate.mjs"), "utf8");
+    assert.equal(/Harbor Precision/.test(src), false);
+    const seed = buildHarborPrecision();
+    seed.organization = { ...seed.organization, name: "Other Shop (fictional)" };
+    seed.scope = { ...seed.scope, narrative: "A fictional CUI enclave (sample)." };
+    seed.determinations["3.12.4"] = { ...seed.determinations["3.12.4"], implementationStub: "" };
+    const gate = generateSspOutline(seed).find((row) => row.key === "req:3.12.4");
+    assert.ok(gate);
+    assert.equal(/Harbor Precision/.test(gate.body), false);
+    assert.match(gate.body, /No implementation stub yet/);
+    assert.ok(String(gate.body).trim().length > 0);
+  });
+
+  it("confirms before regenerate and stamps generatedFrom on scope-related edits", () => {
+    const ui = fs.readFileSync(path.join(root, "src/pages/Ssp.tsx"), "utf8");
+    assert.match(ui, /window\.confirm\(/);
+    assert.match(ui, /generatedFrom: hash/);
+    assert.match(ui, /row\.key === "boundary"/);
   });
 
   it("treats an empty SSP boundary body as a warning, not a score fail-closed", () => {
