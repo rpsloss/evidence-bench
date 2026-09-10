@@ -24,6 +24,17 @@ export function completionLabel(value) {
   return "Unfinished";
 }
 
+export function familyWorkCaption(row) {
+  if (!row) return "not started";
+  if (row.completion === "unfinished") return "not started";
+  if (row.completion === "partial") return `${row.unansweredAos} unanswered`;
+  if (row.completion === "gapped") {
+    if (row.evidenceGaps) return `${row.evidenceGaps} missing pointers`;
+    return `${row.poamGaps} missing POA&M`;
+  }
+  return row.reviewed ? "reviewed" : "awaiting review";
+}
+
 function poamCovered(assessment) {
   return new Set(asList(assessment?.poams).map((row) => str(row?.reqId)).filter(Boolean));
 }
@@ -179,7 +190,7 @@ export function handoffMarkdown(assessment, score, catalog = catalogFile.require
     "",
     "Completion is assembler work status (unfinished / partial / gapped / present). It is not a SPRS finding.",
     "",
-    "| Family | Completion | Reviewed | MET | NOT MET | Unanswered AOs | Evidence gaps | POA&M gaps |",
+    "| Family | Work status | Consultant reviewed | Requirements MET | Requirements NOT MET | Objectives unanswered | MET missing pointer | NOT MET missing POA&M |",
     "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |",
   ];
   for (const row of board.families) {

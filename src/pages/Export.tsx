@@ -8,8 +8,9 @@ import {
   familyReviewsComplete,
   markExportReady,
   SAMPLE_WATERMARK,
+  sprsPreviewRows,
 } from "../lib/exportPack.mjs";
-import { completionLabel, familyProgressRows } from "../lib/familyProgress.mjs";
+import { completionLabel, familyProgressRows, familyWorkCaption } from "../lib/familyProgress.mjs";
 import { reportAssessmentAccess, useAssessment } from "../lib/store";
 
 export default function ExportPage() {
@@ -31,6 +32,13 @@ export default function ExportPage() {
     () => new Map(familyProgressRows(assessment).map((row) => [row.family, row])),
     [assessment],
   );
+  const [sheetFilter, setSheetFilter] = useState<"all" | "gaps" | "special">("gaps");
+  const previewRows = useMemo(() => sprsPreviewRows(assessment), [assessment]);
+  const sheetRows = useMemo(() => {
+    if (sheetFilter === "gaps") return previewRows.filter((row) => row.finding !== "Met" || !row.exportable);
+    if (sheetFilter === "special") return previewRows.filter((row) => row.reqId === "3.5.3" || row.reqId === "3.13.11");
+    return previewRows;
+  }, [previewRows, sheetFilter]);
 
   function markPrep() {
     if (readOnly) return;
@@ -158,8 +166,8 @@ export default function ExportPage() {
           <thead>
             <tr>
               <th>Family</th>
-              <th>Completion</th>
-              <th>Reviewed</th>
+              <th>Work status</th>
+              <th>Consultant reviewed</th>
               <th>Reviewer</th>
             </tr>
           </thead>
@@ -180,6 +188,7 @@ export default function ExportPage() {
                     >
                       {completionLabel(completion)}
                     </span>
+                    <div className="muted">{familyWorkCaption(progress)}</div>
                   </td>
                   <td>
                     <span className={`pill ${ok ? "ok" : "blocker"}`}>{ok ? "reviewed" : "not reviewed"}</span>
@@ -192,18 +201,69 @@ export default function ExportPage() {
         </table>
       </div>
 
-      <h2>Frozen affirmation checklist</h2>
+      <h2>What to type into SPRS</h2>
       <p className="helper">
-        Read-only projection of this pack. {CHECKLIST_PREFIX} Red rows are unsatisfied. No signature capture.
+        {CHECKLIST_PREFIX} Machine CSV headers stay <span className="mono">cmmcId</span>,{" "}
+        <span className="mono">reqId</span>, <span className="mono">finding</span>. The labels below are what those
+        columns mean. MFA and FIPS columns are blank except on 3.5.3 and 3.13.11.
+      </p>
+      <div className="row">
+        <button type="button" className={sheetFilter === "gaps" ? "primary" : undefined} onClick={() => setSheetFilter("gaps")}>
+          Gaps and unanswered
+        </button>
+        <button type="button" className={sheetFilter === "special" ? "primary" : undefined} onClick={() => setSheetFilter("special")}>
+          MFA and FIPS rows
+        </button>
+        <button type="button" className={sheetFilter === "all" ? "primary" : undefined} onClick={() => setSheetFilter("all")}>
+          All 110
+        </button>
+      </div>
+      <div className="card table-scroll" style={{ marginBottom: 16 }}>
+        <table>
+          <thead>
+            <tr>
+              <th>Family</th>
+              <th>CMMC practice ID</th>
+              <th>NIST 800-171 ID</th>
+              <th>Practice title</th>
+              <th>Finding to type</th>
+              <th>N/A reason</th>
+              <th>MFA coverage</th>
+              <th>FIPS module</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sheetRows.map((row) => (
+              <tr key={row.reqId} className={row.exportable ? undefined : "unsatisfied"}>
+                <td>
+                  <span className="mono">{row.family}</span>
+                  <div className="muted">{row.familyName}</div>
+                </td>
+                <td className="mono">{row.cmmcId}</td>
+                <td className="mono">{row.reqId}</td>
+                <td>{row.title}</td>
+                <td>{row.findingNote}</td>
+                <td>{row.naJustification || "—"}</td>
+                <td>{row.mfaLabel}</td>
+                <td>{row.fipsLabel}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Affirming-official checklist</h2>
+      <p className="helper">
+        {CHECKLIST_PREFIX} Read-only projection of this pack. Red rows are not yet true. No signature capture.
       </p>
       <div className="card">
         <table>
           <thead>
             <tr>
-              <th>Id</th>
-              <th>Statement</th>
-              <th>Satisfied</th>
-              <th>Open</th>
+              <th>Check</th>
+              <th>What must be true</th>
+              <th>Ready?</th>
+              <th>Go to</th>
             </tr>
           </thead>
           <tbody>
@@ -211,7 +271,7 @@ export default function ExportPage() {
               <tr key={row.id} className={row.satisfied ? undefined : "unsatisfied"}>
                 <td className="mono">{row.id}</td>
                 <td>
-                  {CHECKLIST_PREFIX} {row.statement}
+                  {row.statement}
                   {row.citation ? <div className="muted">{row.citation}</div> : null}
                 </td>
                 <td>

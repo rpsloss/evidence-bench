@@ -239,7 +239,9 @@ describe("assembler family progress", () => {
     assert.equal(pack.ok, true);
     assert.equal(pack.filename, "evidence-bench-assembler-snapshot.zip");
     assert.equal(Boolean(pack.files["sprs-manual-entry.csv"]), false);
+    assert.match(pack.files["COLUMNS.md"], /CMMC practice ID/);
     assert.match(pack.files["HANDOFF.md"], /Start AC/);
+    assert.match(pack.files["HANDOFF.md"], /Work status/);
     assert.match(pack.files["HANDOFF.md"], /UNCLASSIFIED \/\/ SAMPLE \/\/ NOT A SPRS SUBMISSION/);
     assert.match(pack.files["README.md"], /not a SPRS submission/i);
     const members = unzipStore(pack.zip);
@@ -259,6 +261,7 @@ describe("assembler family progress", () => {
     assert.match(String(res.headers["content-disposition"]), /evidence-bench-assembler-snapshot\.zip/);
     const members = unzipStore(res.buf);
     assert.ok(members.some((row) => row.name === "HANDOFF.md"));
+    assert.ok(members.some((row) => row.name === "COLUMNS.md"));
     assert.equal(
       members.some((row) => row.name === "sprs-manual-entry.csv"),
       false,

@@ -5,7 +5,7 @@ import {
   familyReviewRows,
   reviewedFamilyCount,
 } from "../lib/familyReview.mjs";
-import { completionLabel, familyProgressBoard } from "../lib/familyProgress.mjs";
+import { completionLabel, familyProgressBoard, familyWorkCaption } from "../lib/familyProgress.mjs";
 import { useAssessment } from "../lib/store";
 import type { CmmcStatus } from "../types";
 
@@ -134,10 +134,7 @@ export default function Home() {
               <span className={`pill ${row.completion === "present" ? "ok" : row.completion === "partial" ? "info" : row.completion === "gapped" ? "warning" : "blocker"}`}>
                 {completionLabel(row.completion)}
               </span>
-              <span className="muted">
-                {row.unansweredAos}/{row.aoCount} open
-                {row.reviewed ? " · reviewed" : ""}
-              </span>
+              <span className="muted">{familyWorkCaption(row)}</span>
             </Link>
           ))}
         </div>

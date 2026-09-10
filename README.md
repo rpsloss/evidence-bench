@@ -22,6 +22,8 @@ Open [http://127.0.0.1:5173](http://127.0.0.1:5173). The API listens on **127.0.
 
 Home shows an assembler board per NIST family: **unfinished / partial / gapped / present**. That is work status for the person compiling the pack, not a SPRS finding. Export still refuses `sprs-manual-entry.csv` while any objective is unanswered. `POST /api/snapshot` always emits a SAMPLE zip with `HANDOFF.md` for the AO/SCA, and omits the SPRS CSV.
 
+CSV **header names stay frozen** (`cmmcId`, `reqId`, `mfaState`, …). `COLUMNS.md` in the zip is the plain-language glossary. The Export screen shows the same labels: CMMC practice ID, NIST 800-171 ID, finding to type.
+
 Production-style (after `npm run build`):
 
 ```bash

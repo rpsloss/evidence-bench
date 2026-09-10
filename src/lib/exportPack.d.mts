@@ -22,8 +22,12 @@ export const FAMILY_IDS: readonly [
 export const SPRS_CSV_COLUMNS: "family,cmmcId,reqId,title,finding,naJustification,mfaState,fipsState";
 export const SCOPE_CSV_COLUMNS: "kind,employeeCount,cage,fictional,orgName";
 export const POAM_CSV_COLUMNS: "reqId,cmmcId,weight,conditionalLegal,illegalCode,weakness,owner,due,status";
+export const SPRS_COLUMN_NOTES: readonly string[];
+export const SCOPE_COLUMN_NOTES: readonly string[];
+export const POAM_COLUMN_NOTES: readonly string[];
 export const EXPORT_FILENAMES: readonly [
   "README.md",
+  "COLUMNS.md",
   "HANDOFF.md",
   "ssp.md",
   "checklist.md",
@@ -34,6 +38,7 @@ export const EXPORT_FILENAMES: readonly [
 ];
 export const SNAPSHOT_FILENAMES: readonly [
   "README.md",
+  "COLUMNS.md",
   "HANDOFF.md",
   "ssp.md",
   "checklist.md",
@@ -41,6 +46,22 @@ export const SNAPSHOT_FILENAMES: readonly [
   "poam.csv",
   "assessment.json",
 ];
+
+export interface SprsPreviewRow {
+  family: string;
+  familyName: string;
+  cmmcId: string;
+  reqId: string;
+  title: string;
+  finding: string;
+  findingNote: string;
+  naJustification: string;
+  mfaState: string;
+  mfaLabel: string;
+  fipsState: string;
+  fipsLabel: string;
+  exportable: boolean;
+}
 
 export interface AffirmationChecklistItem {
   id: string;
@@ -103,6 +124,14 @@ export function canExportZip(
   assessment: Assessment | null | undefined | unknown,
   catalog?: CatalogRequirement[],
 ): boolean;
+
+export function mfaStateLabel(code: string): string;
+export function fipsStateLabel(code: string): string;
+export function sprsPreviewRows(
+  assessment: Assessment | null | undefined | unknown,
+  catalog?: CatalogRequirement[],
+): SprsPreviewRow[];
+export function columnsMarkdown(): string;
 
 export function markExportReady(
   assessment: Assessment,

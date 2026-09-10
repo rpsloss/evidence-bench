@@ -259,6 +259,9 @@ tr.unsatisfied td { color: #f0cfc8; }
 .split { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 1rem; }
 .muted { color: var(--muted); font-size: 0.86rem; }
 .helper { color: var(--muted); font-size: 0.78rem; margin: -0.45rem 0 0.7rem; }
+.table-scroll { max-height: 420px; overflow: auto; }
+.table-scroll table { margin: 0; }
+.table-scroll thead th { position: sticky; top: 0; background: var(--bg-elev); }
 .gap-list { margin-top: 0.55rem; max-height: 140px; overflow: auto; font-size: 0.78rem; }
 button.gap-link, .gap-link {
   display: block;

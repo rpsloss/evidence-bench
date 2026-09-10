@@ -2,6 +2,7 @@
 
 import catalogFile from "../data/catalog.json" with { type: "json" };
 import catalogMeta from "../data/catalog.meta.json" with { type: "json" };
+import { FAMILIES } from "./familyReview.mjs";
 import { handoffMarkdown } from "./familyProgress.mjs";
 import { deductedWeight } from "./poamGuard.mjs";
 import { effectiveObjectives, evidenceSupportsMet, rollupRequirement, storedFindings } from "./rollup.mjs";
@@ -32,8 +33,40 @@ export const SPRS_CSV_COLUMNS = "family,cmmcId,reqId,title,finding,naJustificati
 export const SCOPE_CSV_COLUMNS = "kind,employeeCount,cage,fictional,orgName";
 export const POAM_CSV_COLUMNS = "reqId,cmmcId,weight,conditionalLegal,illegalCode,weakness,owner,due,status";
 
+export const SPRS_COLUMN_NOTES = Object.freeze([
+  "family = NIST family code (AC, AT, AU, …).",
+  "cmmcId = CMMC practice ID to type into SPRS (example CA.L2-3.12.4).",
+  "reqId = NIST SP 800-171 Rev. 2 ID (example 3.12.4).",
+  "title = practice title. Reference only.",
+  "finding = Met, Not Met, or N/A. Never not-reviewed.",
+  "naJustification = N/A reason. Blank unless finding is N/A.",
+  "mfaState = 3.5.3 only: all-users | remote-and-privileged-only | none.",
+  "fipsState = 3.13.11 only: fips-validated | encrypt-not-fips | none.",
+]);
+
+export const SCOPE_COLUMN_NOTES = Object.freeze([
+  "kind = Assessment Scope: enclave or enterprise (SPRS definitions).",
+  "employeeCount = headcount on Scope. Warns in-app when Enterprise and ≤ 50.",
+  "cage = always XXXXX in this SAMPLE pack. Fake. Not Castleridge.",
+  "fictional = always true. SAMPLE data only.",
+  "orgName = fictional organization name.",
+]);
+
+export const POAM_COLUMN_NOTES = Object.freeze([
+  "reqId = NIST SP 800-171 ID for the gap.",
+  "cmmcId = CMMC practice ID for the gap.",
+  "weight = points this NOT MET deducts (1, 3, or 5).",
+  "conditionalLegal = true if 32 CFR 170.21 allows this gap on a Conditional L2 Self.",
+  "illegalCode = why Conditional is illegal: banned-requirement | weight-gt-1 | fips-exception-not-met. Blank if legal.",
+  "weakness = short description of the gap.",
+  "owner = local owner name. Not a PIEE identity.",
+  "due = local target date. Does not start the 180-day Conditional clock.",
+  "status = local row status (open unless you closed it here).",
+]);
+
 export const EXPORT_FILENAMES = Object.freeze([
   "README.md",
+  "COLUMNS.md",
   "HANDOFF.md",
   "ssp.md",
   "checklist.md",
@@ -45,6 +78,7 @@ export const EXPORT_FILENAMES = Object.freeze([
 
 export const SNAPSHOT_FILENAMES = Object.freeze([
   "README.md",
+  "COLUMNS.md",
   "HANDOFF.md",
   "ssp.md",
   "checklist.md",
@@ -194,9 +228,10 @@ function csvField(value) {
   return s;
 }
 
-function csvTable(columns, rows) {
-  const header = columns;
-  const lines = [`# ${SAMPLE_WATERMARK}`, header];
+function csvTable(columns, rows, notes = []) {
+  const lines = [`# ${SAMPLE_WATERMARK}`];
+  for (const note of notes) lines.push(`# ${note}`);
+  lines.push(columns);
   for (const row of rows) lines.push(row);
   lines.push(`# ${SAMPLE_WATERMARK}`);
   return `${lines.join("\n")}\n`;
@@ -429,6 +464,110 @@ function csvFinding(finding) {
   return FINDING_CSV[finding] || "";
 }
 
+function familyNameOf(family) {
+  const id = str(family);
+  return FAMILIES.find((row) => row.id === id)?.name || id;
+}
+
+export function mfaStateLabel(code) {
+  if (code === "all-users") return "All users";
+  if (code === "remote-and-privileged-only") return "Remote and privileged only";
+  if (code === "none") return "None";
+  return "—";
+}
+
+export function fipsStateLabel(code) {
+  if (code === "fips-validated") return "FIPS-validated";
+  if (code === "encrypt-not-fips") return "Encrypts, not FIPS-validated";
+  if (code === "none") return "None";
+  return "—";
+}
+
+/**
+ * Typing-sheet rows for the Export screen. Does not throw on unanswered AOs.
+ * findingToType is blank when the row would refuse the SPRS zip.
+ */
+export function sprsPreviewRows(assessment, catalog = catalogFile.requirements) {
+  const evidence = asList(assessment?.evidence);
+  const operationalPoas = asList(assessment?.operationalPoas);
+  const dets = assessment?.determinations && typeof assessment.determinations === "object" ? assessment.determinations : {};
+  const rows = [];
+  for (const req of catalogReqs(catalog)) {
+    const det = dets[req.reqId];
+    const rolled = rollupRequirement(req, det, evidence, operationalPoas);
+    const exportable = EXPORTABLE.has(rolled.finding);
+    const mfa = mfaState(req, rolled, det);
+    const fips = fipsState(req, rolled, det);
+    rows.push({
+      family: str(req.family),
+      familyName: familyNameOf(req.family),
+      cmmcId: str(req.cmmcId),
+      reqId: str(req.reqId),
+      title: str(req.title),
+      finding: exportable ? csvFinding(rolled.finding) : "",
+      findingNote: exportable ? csvFinding(rolled.finding) : "Unanswered — omitted from SPRS zip",
+      naJustification: rolled.finding === "na" ? str(det?.naJustification) : "",
+      mfaState: mfa,
+      mfaLabel: mfaStateLabel(mfa),
+      fipsState: fips,
+      fipsLabel: fipsStateLabel(fips),
+      exportable,
+    });
+  }
+  return rows;
+}
+
+export function columnsMarkdown() {
+  return [
+    SAMPLE_WATERMARK,
+    "",
+    "# Export column glossary (SAMPLE)",
+    "",
+    "CSV **header names stay frozen** so a script can parse them. Type the values into SPRS by hand.",
+    "This file is not a SPRS submission. Fake CAGE XXXXX.",
+    "",
+    "## sprs-manual-entry.csv — what to type",
+    "",
+    "| Header | Plain-language name | What the value is |",
+    "| --- | --- | --- |",
+    "| family | Family | NIST 800-171 family code (AC, AT, AU, …). |",
+    "| cmmcId | CMMC practice ID | The SPRS practice identifier, such as CA.L2-3.12.4. |",
+    "| reqId | NIST 800-171 ID | Short requirement number, such as 3.12.4. |",
+    "| title | Practice title | Reference only. Not typed into SPRS. |",
+    "| finding | Finding to type | Met, Not Met, or N/A. Never not-reviewed. |",
+    "| naJustification | N/A reason | Filled only when finding is N/A. |",
+    "| mfaState | MFA coverage | 3.5.3 only: all-users, remote-and-privileged-only, or none. Blank on other rows. |",
+    "| fipsState | FIPS module | 3.13.11 only: fips-validated, encrypt-not-fips, or none. Blank on other rows. |",
+    "",
+    "## scope.csv",
+    "",
+    "| Header | Plain-language name | What the value is |",
+    "| --- | --- | --- |",
+    "| kind | Assessment Scope | enclave or enterprise. |",
+    "| employeeCount | Employees | Headcount from Scope. |",
+    "| cage | CAGE | Always XXXXX in SAMPLE. |",
+    "| fictional | SAMPLE flag | Always true. |",
+    "| orgName | Organization | Fictional name. |",
+    "",
+    "## poam.csv",
+    "",
+    "| Header | Plain-language name | What the value is |",
+    "| --- | --- | --- |",
+    "| reqId | NIST 800-171 ID | Requirement with a NOT MET gap. |",
+    "| cmmcId | CMMC practice ID | Practice for that gap. |",
+    "| weight | Points deducted | 1, 3, or 5. |",
+    "| conditionalLegal | Allowed on Conditional? | true or false under 32 CFR 170.21. |",
+    "| illegalCode | Why not Conditional | banned-requirement, weight-gt-1, or fips-exception-not-met. Blank if legal. |",
+    "| weakness | Gap description | Local notes. |",
+    "| owner | Owner | Local name. Not a PIEE identity. |",
+    "| due | Target date | Local only. Does not start the 180-day clock. |",
+    "| status | Row status | Local open/closed. |",
+    "",
+    SAMPLE_WATERMARK,
+    "",
+  ].join("\n");
+}
+
 export class ExportRefused extends Error {
   constructor(code) {
     super(code);
@@ -534,6 +673,7 @@ function readmeMd(assessment, score, checklist, ready) {
     red.length ? `- Unsatisfied checklist rows: ${red.join(", ")}` : "- Frozen checklist: all rows satisfied",
     "",
     "Type sprs-manual-entry.csv into SPRS by hand. Not a SPRS submission.",
+    "COLUMNS.md is the plain-language glossary for every CSV header (cmmcId, reqId, mfaState, …).",
     "HANDOFF.md is the assembler cover sheet for the AO/SCA. Completion status is unfinished / partial / gapped / present — not a SPRS finding.",
     SAMPLE_WATERMARK,
     "",
@@ -663,12 +803,13 @@ export function buildExportPack(input = {}) {
 
   const files = {
     "README.md": readmeMd(assessment, score, checklist, ready),
+    "COLUMNS.md": columnsMarkdown(),
     "HANDOFF.md": handoffMarkdown(assessment, score, catalog),
     "ssp.md": sspMd(assessment),
     "checklist.md": checklistMd(checklist),
-    "sprs-manual-entry.csv": csvTable(SPRS_CSV_COLUMNS, sprs),
-    "scope.csv": csvTable(SCOPE_CSV_COLUMNS, [scopeRow(assessment)]),
-    "poam.csv": csvTable(POAM_CSV_COLUMNS, poamRows(catalog, assessment)),
+    "sprs-manual-entry.csv": csvTable(SPRS_CSV_COLUMNS, sprs, SPRS_COLUMN_NOTES),
+    "scope.csv": csvTable(SCOPE_CSV_COLUMNS, [scopeRow(assessment)], SCOPE_COLUMN_NOTES),
+    "poam.csv": csvTable(POAM_CSV_COLUMNS, poamRows(catalog, assessment), POAM_COLUMN_NOTES),
     "assessment.json": packJson(assessment, score, checklist, ready, createdAt),
   };
 
@@ -711,11 +852,12 @@ export function buildAssemblerSnapshot(input = {}) {
   const checklist = affirmationChecklist(assessment, score, catalog);
   const files = {
     "README.md": snapshotReadme(assessment, score),
+    "COLUMNS.md": columnsMarkdown(),
     "HANDOFF.md": handoffMarkdown(assessment, score, catalog),
     "ssp.md": sspMd(assessment),
     "checklist.md": checklistMd(checklist),
-    "scope.csv": csvTable(SCOPE_CSV_COLUMNS, [scopeRow(assessment)]),
-    "poam.csv": csvTable(POAM_CSV_COLUMNS, poamRows(catalog, assessment)),
+    "scope.csv": csvTable(SCOPE_CSV_COLUMNS, [scopeRow(assessment)], SCOPE_COLUMN_NOTES),
+    "poam.csv": csvTable(POAM_CSV_COLUMNS, poamRows(catalog, assessment), POAM_COLUMN_NOTES),
     "assessment.json": packJson(assessment, score, checklist, ready, createdAt),
   };
   const entries = [];

@@ -42,6 +42,7 @@ export interface FamilyProgressBoard {
 }
 
 export function completionLabel(value: string): string;
+export function familyWorkCaption(row: FamilyProgressRow | null | undefined): string;
 
 export function familyProgressRows(
   assessment: Assessment | null | undefined | unknown,

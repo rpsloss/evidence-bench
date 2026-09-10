@@ -21,7 +21,9 @@ import {
   POAM_CSV_COLUMNS,
   SAMPLE_WATERMARK,
   SCOPE_CSV_COLUMNS,
+  SPRS_COLUMN_NOTES,
   SPRS_CSV_COLUMNS,
+  sprsPreviewRows,
 } from "../src/lib/exportPack.mjs";
 import { storedFinding } from "../src/lib/rollup.mjs";
 
@@ -301,6 +303,31 @@ describe("export watermark T15", () => {
     assert.equal(json.watermark, SAMPLE_WATERMARK);
     assert.equal(json.assessment.organization.cage, "XXXXX");
     assert.equal(json.assessment.organization.fictional, true);
+    assert.match(pack.files["COLUMNS.md"], /CMMC practice ID/);
+    assert.match(pack.files["COLUMNS.md"], /NIST 800-171 ID/);
+    assert.match(pack.files["sprs-manual-entry.csv"], /cmmcId = CMMC practice ID/);
+    assert.equal(
+      SPRS_COLUMN_NOTES.every((note) => pack.files["sprs-manual-entry.csv"].includes(note)),
+      true,
+    );
+  });
+
+  it("SPRS preview uses plain-language findings and does not invent Met for unanswered rows", () => {
+    const seed = buildHarborPrecision();
+    const rows = sprsPreviewRows(seed);
+    assert.equal(rows.length, 110);
+    const gap = rows.find((row) => row.reqId === "3.2.3");
+    assert.equal(gap.finding, "Not Met");
+    assert.equal(gap.cmmcId, "AT.L2-3.2.3");
+    assert.equal(gap.familyName, "Awareness and Training");
+    const mfa = rows.find((row) => row.reqId === "3.5.3");
+    assert.equal(mfa.mfaState, "all-users");
+    assert.equal(mfa.mfaLabel, "All users");
+    const fips = rows.find((row) => row.reqId === "3.13.11");
+    assert.equal(fips.fipsLabel, "FIPS-validated");
+    const plain = rows.find((row) => row.reqId === "3.1.1");
+    assert.equal(plain.mfaLabel, "—");
+    assert.equal(plain.fipsLabel, "—");
   });
 
   it("familyReviews empty blocks export-ready; 14 reviews unlock prepMarkedAt only", () => {
@@ -377,5 +404,9 @@ describe("export watermark T15", () => {
     assert.equal(items.find((row) => row.id === "ao-named")?.satisfied, true);
     const ui = fs.readFileSync(path.join(root, "src/pages/Export.tsx"), "utf8");
     assert.match(ui, /CHECKLIST_PREFIX/);
+    assert.match(ui, /CMMC practice ID/);
+    assert.match(ui, /NIST 800-171 ID/);
+    assert.match(ui, /Finding to type/);
+    assert.equal(/CHECKLIST_PREFIX\} \{row\.statement\}/.test(ui), false);
   });
 });
