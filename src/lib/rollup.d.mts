@@ -133,6 +133,11 @@ export function filter171AAoIds(
   aoIds: unknown,
   catalog: CatalogRequirement[] | null | undefined,
 ): AoId[];
+export function isPlaceholderUri(uri: string | null | undefined): boolean;
+export function evidenceCoversAo(
+  item: EvidenceItem | null | undefined,
+  aoId: string | null | undefined,
+): boolean;
 export function effectiveObjectives(
   req: CatalogRequirement,
   determination?: Determination | null,

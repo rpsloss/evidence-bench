@@ -7,6 +7,7 @@ import { validateAssessment } from "../server/assessment.mjs";
 import { buildHarborPrecision } from "../src/data/harbor-precision.mjs";
 import {
   cuiFilenameRisk,
+  evidenceCoversAo,
   evidenceGapBoard,
   filter171AAoIds,
   storedFinding,
@@ -143,10 +144,24 @@ describe("evidence credit (T13 T14 T19 T20)", () => {
     assert.equal(findingOf(input, "3.1.1"), "met");
   });
 
-  it("interview-only evidence does not support MET", () => {
+  it("T13-style: interview-only mapped pointer → not-reviewed and Missing", () => {
+    const row = req("3.1.1");
     const input = allMetOne("3.1.1");
-    input.evidence = [pointer(req("3.1.1"), { kind: "interview" })];
+    input.evidence = [pointer(row, { kind: "interview" })];
     assert.equal(findingOf(input, "3.1.1"), "not-reviewed");
+    const gaps = evidenceGapBoard(catalog, input.determinations, input.evidence, GAP_NOW);
+    for (const ao of row.objectives) {
+      assert.equal(evidenceCoversAo(input.evidence[0], ao.aoId), false, ao.aoId);
+      assert.ok(gaps.missing.some((g) => g.aoId === ao.aoId), ao.aoId);
+    }
+  });
+
+  it("placeholder URI does not cover MET AOs", () => {
+    const input = allMetOne("3.1.1");
+    input.evidence = [pointer(req("3.1.1"), { uri: "file:///unclass/sample/", draft: false })];
+    assert.equal(findingOf(input, "3.1.1"), "not-reviewed");
+    const gaps = evidenceGapBoard(catalog, input.determinations, input.evidence, GAP_NOW);
+    assert.ok(gaps.missing.some((g) => g.aoId === "3.1.1[a]"));
   });
 
   it("Harbor MET AOs pass the evidence gate except 3.2.3 and 3.4.9; raw 108 incomplete", () => {
@@ -225,11 +240,50 @@ describe("evidence credit (T13 T14 T19 T20)", () => {
     assert.ok(unmapped.assessment.evidence.some((row) => row.id === "ev-unmapped-policy"));
   });
 
+  it("PUT filters aoIds to 171A and still saves empty aoIds", () => {
+    const seed = buildHarborPrecision();
+    const saved = validateAssessment({
+      assessment: {
+        ...seed,
+        evidence: [
+          {
+            id: "ev-overlay-keys",
+            title: "sample",
+            kind: "policy",
+            uri: "file:///unclass/sample/harbor/overlay.pdf",
+            capturedAt: CAPTURED,
+            aoIds: ["enc", "fips", "3.1.1[a]"],
+            owner: "sample",
+            draft: false,
+            notes: "Unclassified pointer only.",
+          },
+          {
+            id: "ev-empty-aos",
+            title: "unmapped",
+            kind: "policy",
+            uri: "file:///unclass/sample/harbor/empty.pdf",
+            capturedAt: CAPTURED,
+            aoIds: [],
+            owner: "sample",
+            draft: false,
+            notes: "Unclassified pointer only.",
+          },
+        ],
+      },
+    });
+    assert.equal(saved.ok, true);
+    const overlay = saved.assessment.evidence.find((row) => row.id === "ev-overlay-keys");
+    assert.deepEqual(overlay.aoIds, ["3.1.1[a]"]);
+    const empty = saved.assessment.evidence.find((row) => row.id === "ev-empty-aos");
+    assert.deepEqual(empty.aoIds, []);
+  });
+
   it("Evidence UI is hash-only: no upload, no storedName, no FormData", () => {
     const ui = fs.readFileSync(path.join(root, "src/pages/Evidence.tsx"), "utf8");
     assert.match(ui, /crypto\.subtle\.digest/);
     assert.match(ui, /type="file"/);
     assert.match(ui, /Hash-only picker/);
+    assert.match(ui, /draft:\s*true/);
     assert.equal(/\bFormData\b/.test(ui), false);
     assert.equal(/storedName\s*=/.test(ui), false);
     assert.equal(/\bmulter\b/.test(ui), false);

@@ -5,6 +5,7 @@ import {
   EVIDENCE_KINDS,
   evidenceGapBoard,
   filter171AAoIds,
+  isPlaceholderUri,
   type CatalogRequirement,
   type EvidenceKind,
 } from "../lib/rollup.mjs";
@@ -26,7 +27,7 @@ function emptyItem(id: string): EvidenceItem {
     capturedAt: new Date().toISOString(),
     aoIds: [],
     owner: "",
-    draft: false,
+    draft: true,
     notes: "",
   };
 }
@@ -135,7 +136,7 @@ export default function Evidence() {
           title="Missing"
           count={gaps.missing.length}
           severity="blocker"
-          hint="MET AOs with no non-draft pointer"
+          hint="MET AOs with no non-draft, non-interview pointer"
         >
           {gaps.missing.slice(0, 8).map((row) => (
             <button
@@ -285,6 +286,10 @@ export default function Evidence() {
                   <div className="helper" style={{ color: "var(--amber)" }}>
                     Filename looks CUI-like. Point at an unclassified URI. Warning only.
                   </div>
+                ) : isPlaceholderUri(item.uri) ? (
+                  <div className="helper">
+                    Placeholder URI does not credit MET. Point at a real unclassified file:// or https:// path.
+                  </div>
                 ) : (
                   <div className="helper">file:// or https://. Never paste CUI into the path.</div>
                 )}
@@ -345,7 +350,7 @@ export default function Evidence() {
                     checked={item.draft === true}
                     onChange={(e) => patchItem(item.id, { draft: e.target.checked })}
                   />
-                  Draft (cannot support MET)
+                  Draft until confirmed (cannot support MET)
                 </label>
                 <label htmlFor="ev-aos">aoIds (171A only, one per line)</label>
                 <textarea

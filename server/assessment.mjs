@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import catalogFile from "../src/data/catalog.json" with { type: "json" };
 import catalogMeta from "../src/data/catalog.meta.json" with { type: "json" };
 import { poamGuard } from "../src/lib/poamGuard.mjs";
-import { effectiveObjectives, storedFinding, guardNaWrite } from "../src/lib/rollup.mjs";
+import { effectiveObjectives, storedFinding, guardNaWrite, filter171AAoIds } from "../src/lib/rollup.mjs";
 import { derivePartialState } from "../src/lib/score.mjs";
 
 const ASSET_CATEGORIES = new Set(["cui", "spa", "crma", "specialized", "oos"]);
@@ -207,7 +207,11 @@ export function validateAssessment(body) {
     }
   }
 
-  const evidence = Array.isArray(raw.evidence) ? raw.evidence : [];
+  const catalogReqs = catalogFile.requirements || [];
+  const evidence = (Array.isArray(raw.evidence) ? raw.evidence : []).map((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+    return { ...item, aoIds: filter171AAoIds(item.aoIds, catalogReqs) };
+  });
   const determinations =
     raw.determinations && typeof raw.determinations === "object" && !Array.isArray(raw.determinations)
       ? raw.determinations

@@ -129,6 +129,33 @@ function linkedEvidenceIds(aoId, evidence) {
   return out;
 }
 
+/** Empty or the Evidence-page default prefix — not a real pointer. */
+export function isPlaceholderUri(uri) {
+  const t = str(uri).trim();
+  if (!t) return true;
+  return t === "file:///unclass/sample" || t === "file:///unclass/sample/";
+}
+
+/**
+ * Same covering predicate as the MET gate: non-draft, non-interview, non-empty 171A
+ * aoIds that include this AO, and a URI that is not the placeholder stub.
+ */
+export function evidenceCoversAo(item, aoId) {
+  if (!item || typeof item !== "object") return false;
+  if (item.draft === true) return false;
+  if (str(item.kind) === "interview") return false;
+  if (isPlaceholderUri(item.uri)) return false;
+  const id = str(aoId);
+  if (!id) return false;
+  const aoIds = asList(item.aoIds).map(str).filter(Boolean);
+  if (aoIds.length === 0) return false;
+  return aoIds.includes(id);
+}
+
+function coveringEvidence(aoId, evidence) {
+  return asList(evidence).filter((item) => evidenceCoversAo(item, aoId));
+}
+
 /**
  * @param {object} req
  * @param {object | null | undefined} determination
@@ -181,22 +208,6 @@ export function rollupWouldBeFinding(req, objectives) {
   return "not-reviewed";
 }
 
-function mappedEvidence(aoId, evidence) {
-  const id = str(aoId);
-  if (!id) return [];
-  const out = [];
-  for (const item of asList(evidence)) {
-    if (!item || typeof item !== "object") continue;
-    if (item.draft === true) continue;
-    const aoIds = asList(item.aoIds).map(str).filter(Boolean);
-    // Empty aoIds is unmapped and never credits MET.
-    if (aoIds.length === 0) continue;
-    if (!aoIds.includes(id)) continue;
-    out.push(item);
-  }
-  return out;
-}
-
 /**
  * Invariant 3. Overlay keys are not 171A letters and never require evidence.
  * @param {object[]} objectives
@@ -205,16 +216,14 @@ function mappedEvidence(aoId, evidence) {
 export function evidenceSupportsMet(objectives, evidence) {
   for (const ao of asList(objectives)) {
     if (asFinding(ao?.finding) !== "met") continue;
-    const items = mappedEvidence(ao.aoId, evidence);
-    if (items.length === 0) return false;
-    if (!items.some((item) => str(item.kind) !== "interview")) return false;
+    if (coveringEvidence(ao.aoId, evidence).length === 0) return false;
   }
   return true;
 }
 
 /**
  * Gap board: missing / stale / unmapped / draft / missing sha256.
- * Missing is a MET breaker. Stale is a warning unless every linked item is also draft.
+ * Missing uses the same covering predicate as MET. Stale is a warning, not a MET breaker.
  */
 export function evidenceGapBoard(catalog, determinations, evidence, now = Date.now()) {
   const items = asList(evidence);
@@ -225,7 +234,7 @@ export function evidenceGapBoard(catalog, determinations, evidence, now = Date.n
     const objectives = effectiveObjectives(req, dets[str(req.reqId)], items);
     for (const ao of objectives) {
       if (asFinding(ao.finding) !== "met") continue;
-      if (mappedEvidence(ao.aoId, items).length > 0) continue;
+      if (coveringEvidence(ao.aoId, items).length > 0) continue;
       missing.push({ aoId: ao.aoId, reqId: str(req.reqId), cmmcId: str(req.cmmcId) });
     }
   }

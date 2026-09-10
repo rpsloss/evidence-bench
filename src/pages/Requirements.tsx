@@ -3,6 +3,7 @@ import catalogFile from "../data/catalog.json";
 import {
   deriveFipsAoFinding,
   effectiveObjectives,
+  evidenceCoversAo,
   guardNaWrite,
   rollupRequirement,
   type CatalogRequirement,
@@ -47,6 +48,28 @@ function findingLabel(finding: Finding) {
 function naMessage(reject: string) {
   if (reject === "na-not-allowed") return "N/A is not allowed on CA.L2-3.12.4.";
   return "N/A requires a justification.";
+}
+
+function PointerHelper({
+  aoId,
+  finding,
+  evidence,
+}: {
+  aoId: string;
+  finding: Finding;
+  evidence: EvidenceItem[];
+}) {
+  const linked = evidence.filter((item) => (item.aoIds || []).includes(aoId)).length;
+  const covering = evidence.filter((item) => evidenceCoversAo(item, aoId)).length;
+  return (
+    <div className="helper">
+      Linked pointers: {linked || "none"}
+      {linked > 0 && covering !== linked ? ` · covering: ${covering}` : ""}
+      {finding === "met" && covering === 0
+        ? " — MET will stay not-reviewed until a non-draft, non-interview pointer is mapped."
+        : ""}
+    </div>
+  );
 }
 
 function emptyDet(req: CatalogRequirement): Determination {
@@ -402,9 +425,9 @@ function RequirementDetail({
               <span className={`pill ${derivedA || "not-reviewed"}`}>{findingLabel(derivedA || "not-reviewed")}</span>
               <div className="helper">
                 Read-only. Derived from enc / fips overlays. Evidence is required on [a] when derived MET, not on
-                enc/fips. Linked pointers:{" "}
-                {effectiveObjectives(req, det, evidence)[0]?.evidenceIds?.length || "none"}.
+                enc/fips.
               </div>
+              <PointerHelper aoId="3.13.11[a]" finding={derivedA || "not-reviewed"} evidence={evidence} />
             </div>
           </div>
         ) : (
@@ -434,12 +457,7 @@ function RequirementDetail({
                       value={ao.rationale || ""}
                       onChange={(e) => onAoRationale(req, ao.aoId, e.target.value)}
                     />
-                    <div className="helper">
-                      Linked pointers: {ao.evidenceIds?.length || "none"}
-                      {ao.finding === "met" && (ao.evidenceIds?.length ?? 0) === 0
-                        ? " — MET will stay not-reviewed until mapped."
-                        : ""}
-                    </div>
+                    <PointerHelper aoId={ao.aoId} finding={ao.finding} evidence={evidence} />
                   </div>
                 </div>
               </div>
