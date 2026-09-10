@@ -59,17 +59,19 @@ export default function Poam() {
     return map;
   }, [assessment.determinations, assessment.evidence, assessment.operationalPoas]);
 
-  const insertChoices = useMemo(() => {
-    const notMet = catalog.filter((req) => findings.get(req.reqId) === "not-met" && !taken.has(req.reqId));
-    if (notMet.length) return notMet;
-    return catalog.filter((req) => !taken.has(req.reqId));
-  }, [findings, taken]);
+  const insertChoices = useMemo(
+    () => catalog.filter((req) => findings.get(req.reqId) === "not-met" && !taken.has(req.reqId)),
+    [findings, taken],
+  );
 
-  const selectedReqId = form.reqId || insertChoices[0]?.reqId || "";
+  const selectedReqId = insertChoices.some((req) => req.reqId === form.reqId)
+    ? form.reqId
+    : (insertChoices[0]?.reqId ?? "");
+  const canInsert = Boolean(selectedReqId) && !readOnly && !busy;
 
   async function insertRegister(e: FormEvent) {
     e.preventDefault();
-    if (readOnly || busy) return;
+    if (!canInsert || !insertChoices.some((req) => req.reqId === selectedReqId)) return;
     setBusy(true);
     setError(null);
     try {
@@ -145,17 +147,31 @@ export default function Poam() {
               </div>
             </div>
           ) : null}
-          <fieldset className="stack" disabled={readOnly || busy}>
+          <fieldset className="stack" disabled={readOnly || busy || !canInsert}>
             <form onSubmit={insertRegister}>
               <label>Requirement</label>
-              <select value={selectedReqId} onChange={(e) => setForm((f) => ({ ...f, reqId: e.target.value }))}>
-                {insertChoices.map((req) => (
-                  <option key={req.reqId} value={req.reqId}>
-                    {req.cmmcId} · {req.title} ({req.weight}-pt
-                    {req.poamBannedForConditional ? ", banned" : ""})
-                  </option>
-                ))}
+              <select
+                value={selectedReqId}
+                onChange={(e) => setForm((f) => ({ ...f, reqId: e.target.value }))}
+                disabled={!insertChoices.length}
+              >
+                {insertChoices.length === 0 ? (
+                  <option value="">No remaining NOT MET gaps</option>
+                ) : (
+                  insertChoices.map((req) => (
+                    <option key={req.reqId} value={req.reqId}>
+                      {req.cmmcId} · {req.title} ({req.weight}-pt
+                      {req.poamBannedForConditional ? ", banned" : ""})
+                    </option>
+                  ))
+                )}
               </select>
+              {insertChoices.length === 0 ? (
+                <div className="helper">
+                  Every current NOT MET is already on the register. Insert stays disabled so a MET or unanswered row
+                  cannot be posted.
+                </div>
+              ) : null}
               <label>Weakness</label>
               <textarea value={form.weakness} onChange={(e) => setForm((f) => ({ ...f, weakness: e.target.value }))} />
               <label>Tasks</label>
@@ -179,7 +195,7 @@ export default function Poam() {
                 <option value="in-progress">in-progress</option>
                 <option value="closed">closed</option>
               </select>
-              <button type="submit" className="primary" disabled={!selectedReqId}>
+              <button type="submit" className="primary" disabled={!canInsert}>
                 Record NOT MET
               </button>
             </form>
