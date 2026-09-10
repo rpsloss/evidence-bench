@@ -6,6 +6,8 @@ Local CMMC Level 2 (Self) assessment workbench for one prep cycle. **SPRS remain
 
 Castleridge Solutions is Hawaiʻi-based. This product stores **unclassified pointers only** — no CUI blobs, no multipart upload.
 
+License: MIT. Local assessment files under `data/` (encrypted JSON, key, audit log) are gitignored and must never be committed.
+
 ## Run locally
 
 Requires Node.js 20+.
