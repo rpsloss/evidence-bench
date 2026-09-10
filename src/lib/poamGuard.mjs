@@ -34,6 +34,30 @@ export function deductedWeight(req, partialState, finding) {
   return asWeight(req?.weight, 1);
 }
 
+const BANNED_CITATIONS = {
+  "3.1.20": "32 CFR 170.21(a)(2)(iii)(A)",
+  "3.1.22": "32 CFR 170.21(a)(2)(iii)(B)",
+  "3.12.4": "32 CFR 170.21(a)(2)(iii)(C)",
+  "3.10.3": "32 CFR 170.21(a)(2)(iii)(D)",
+  "3.10.4": "32 CFR 170.21(a)(2)(iii)(E)",
+  "3.10.5": "32 CFR 170.21(a)(2)(iii)(F)",
+};
+
+/**
+ * Chip copy for a Conditional-illegal register row. Not legal advice.
+ * @param {string | null | undefined} illegalCode
+ * @param {string | null | undefined} reqId
+ */
+export function citationForIllegal(illegalCode, reqId) {
+  if (illegalCode === "banned-requirement") {
+    return BANNED_CITATIONS[str(reqId)] || "32 CFR 170.21(a)(2)(iii)";
+  }
+  if (illegalCode === "weight-gt-1" || illegalCode === "fips-exception-not-met") {
+    return "32 CFR 170.21(a)(2)(ii)";
+  }
+  return "32 CFR 170.21(a)(2)";
+}
+
 /**
  * Stored flag is not authority — score() re-runs this.
  * @param {{ req: object, finding: string, partialState?: string | null, deductedWeight?: number | null }} input
@@ -92,5 +116,9 @@ export function poamGuard(input) {
     conditionalLegal: legality.conditionalLegal === true,
   };
   if (!next.conditionalLegal && legality.illegalCode) next.illegalCode = legality.illegalCode;
-  return { ok: true, item: next };
+  const out = { ok: true, item: next };
+  if (!next.conditionalLegal) {
+    out.citation = citationForIllegal(next.illegalCode, next.reqId);
+  }
+  return out;
 }

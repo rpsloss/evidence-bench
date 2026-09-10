@@ -1,3 +1,7 @@
+import type { OperationalPoaItem } from "./lib/rollup.mjs";
+import type { PoamItem } from "./lib/poamGuard.mjs";
+
+export type { OperationalPoaItem, PoamItem };
 export type AssetCategory = "cui" | "spa" | "crma" | "specialized" | "oos";
 export type ScopeKind = "enterprise" | "enclave";
 export type FlowChannel = "email" | "file" | "cad" | "removable-media" | "saas" | "other";

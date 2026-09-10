@@ -48,6 +48,19 @@ function harborDeterminations() {
   return determinations;
 }
 
+function harborPoam(reqId, weakness, tasks) {
+  return {
+    id: `poam-${reqId}`,
+    reqId,
+    weakness,
+    tasks,
+    owner: "Jordan Hale (fictional)",
+    due: "2026-06-30",
+    status: "open",
+    conditionalLegal: true,
+  };
+}
+
 export function buildHarborPrecision() {
   return {
     id: "asmt-harbor-precision-l2-self",
@@ -149,7 +162,18 @@ export function buildHarborPrecision() {
     ],
     determinations: harborDeterminations(),
     evidence: [],
-    poams: [],
+    poams: [
+      harborPoam(
+        "3.2.3",
+        "Insider-threat awareness training is not yet delivered in this fictional enclave.",
+        "Deliver a sample insider-threat awareness module to managers and employees.",
+      ),
+      harborPoam(
+        "3.4.9",
+        "User-installed software is not yet controlled and monitored in this fictional enclave.",
+        "Publish a sample user-software policy and monitor installs on CUI assets.",
+      ),
+    ],
     operationalPoas: [],
     ssp: [],
     familyReviews: [],

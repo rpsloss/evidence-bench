@@ -29,8 +29,13 @@ export interface ConditionalLegality {
 }
 
 export type PoamGuardResult =
-  | { ok: true; item: PoamItem }
+  | { ok: true; item: PoamItem; citation?: string }
   | { ok: false; reject: PoamInsertReject };
+
+export function citationForIllegal(
+  illegalCode?: ConditionalIllegalCode | string | null,
+  reqId?: ReqId | string | null,
+): string;
 
 export function deductedWeight(
   req: CatalogRequirement,
