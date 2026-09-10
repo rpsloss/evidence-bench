@@ -9,13 +9,30 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import catalogFile from "../data/catalog.json";
+import catalogMeta from "../data/catalog.meta.json";
 import { buildHarborPrecision } from "../data/harbor-precision.mjs";
+import type { CatalogRequirement } from "./rollup.mjs";
+import { CatalogHashMismatch, scoreFromAssessment, type AssessmentScore } from "./score.mjs";
 import type { Assessment } from "../types";
 
 export type SaveWarning = { field: string; message: string };
 
+const CATALOG = catalogFile.requirements as CatalogRequirement[];
+const CATALOG_HASH = catalogMeta.catalogSha256;
+
+export function liveScore(assessment: Assessment): AssessmentScore | null {
+  try {
+    return scoreFromAssessment(assessment, CATALOG, CATALOG_HASH);
+  } catch (err) {
+    if (err instanceof CatalogHashMismatch) return null;
+    throw err;
+  }
+}
+
 type Store = {
   assessment: Assessment;
+  score: AssessmentScore | null;
   loading: boolean;
   saving: boolean;
   lastSaved: string | null;
@@ -67,6 +84,7 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
   const skip = useRef(true);
   const readOnlyRef = useRef(false);
   readOnlyRef.current = readOnly;
+  const score = useMemo(() => liveScore(assessment), [assessment]);
 
   useEffect(() => {
     let cancelled = false;
@@ -159,6 +177,7 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       assessment,
+      score,
       loading,
       saving,
       lastSaved,
@@ -168,7 +187,7 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
       setAssessment,
       loadSample,
     }),
-    [assessment, loading, saving, lastSaved, error, warnings, readOnly, setAssessment, loadSample],
+    [assessment, score, loading, saving, lastSaved, error, warnings, readOnly, setAssessment, loadSample],
   );
 
   return createElement(Ctx.Provider, { value }, children);

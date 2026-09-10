@@ -315,3 +315,38 @@ export function score(input) {
     computedAt: new Date().toISOString(),
   };
 }
+
+/** 3.12.4 body is the incomplete-assessment gate; other SSP sections are fallback. */
+export function sspBodyOf(assessment) {
+  const ssp = assessment?.ssp;
+  if (typeof ssp === "string") return ssp;
+  const sections = asList(ssp);
+  const hit = sections.find((row) => {
+    if (!row || typeof row !== "object") return false;
+    const key = str(row.key);
+    const id = str(row.id);
+    const title = str(row.title);
+    return key === "req:3.12.4" || id.includes("3.12.4") || title.includes("3.12.4");
+  });
+  if (hit && typeof hit.body === "string") return hit.body;
+  return sections.map((row) => str(row?.body)).join("\n");
+}
+
+/**
+ * Score an Assessment object. Empty catalogHash is treated as the expected hash
+ * so pre-catalog packages still score; a non-matching hash still refuses.
+ */
+export function scoreFromAssessment(assessment, catalog, expectedCatalogHash) {
+  const expected = str(expectedCatalogHash).trim();
+  const got = str(assessment?.catalogHash).trim();
+  return score({
+    catalog: asList(catalog),
+    determinations: assessment?.determinations,
+    sspBody: sspBodyOf(assessment),
+    poams: assessment?.poams,
+    evidence: assessment?.evidence,
+    operationalPoas: assessment?.operationalPoas,
+    catalogHash: got || expected,
+    expectedCatalogHash: expected || null,
+  });
+}

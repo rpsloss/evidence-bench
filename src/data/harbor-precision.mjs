@@ -1,10 +1,58 @@
-/** Fictional Harbor Precision org/scope/assets/flows seed. */
+/** Fictional Harbor Precision org/scope/assets/flows + determination stubs. */
+
+import catalogFile from "./catalog.json" with { type: "json" };
+import catalogMeta from "./catalog.meta.json" with { type: "json" };
+
+const NOT_MET_SEED = new Set(["3.2.3", "3.4.9"]);
+
+function aoFinding(ao, finding) {
+  const gap =
+    finding === "not-met"
+      ? "Harbor seed gap (sample). 1-point NOT MET stub."
+      : "Harbor MET stub (sample). Evidence arrives in a later PR.";
+  return {
+    aoId: ao.aoId,
+    finding,
+    rationale: gap,
+    evidenceIds: [],
+    assessedAt: null,
+    assessedBy: null,
+  };
+}
+
+function stubDetermination(req) {
+  const finding = NOT_MET_SEED.has(req.reqId) ? "not-met" : "met";
+  const det = {
+    reqId: req.reqId,
+    objectives: req.objectives.map((ao) => aoFinding(ao, finding)),
+    finding,
+    naJustification: "",
+    implementationStub: "Harbor Precision (fictional) stub. SAMPLE only. Not CUI.",
+    owner: "Jordan Hale (fictional)",
+    enduringException: false,
+    sspCitation: "",
+    temporaryDeficiency: false,
+  };
+  if (req.partialCredit?.kind === "fips") {
+    det.fipsOverlay = { enc: finding, fips: finding };
+  }
+  return det;
+}
+
+function harborDeterminations() {
+  const determinations = {};
+  for (const req of catalogFile.requirements) {
+    if (!req?.reqId) continue;
+    determinations[req.reqId] = stubDetermination(req);
+  }
+  return determinations;
+}
 
 export function buildHarborPrecision() {
   return {
     id: "asmt-harbor-precision-l2-self",
     standard: "NIST-SP-800-171-R2",
-    catalogHash: "",
+    catalogHash: catalogMeta.catalogSha256,
     organization: {
       id: "org-harbor-precision",
       name: "Harbor Precision (fictional)",
@@ -99,7 +147,7 @@ export function buildHarborPrecision() {
         notes: "Inbound CUI-marked mail to the CAD workstation.",
       },
     ],
-    determinations: {},
+    determinations: harborDeterminations(),
     evidence: [],
     poams: [],
     operationalPoas: [],

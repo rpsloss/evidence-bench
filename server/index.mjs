@@ -7,6 +7,9 @@ import { appendAudit } from "./auditLog.mjs";
 import { validateAssessment } from "./assessment.mjs";
 import { errorClass, loadPackage, savePackage, storePaths } from "./packageStore.mjs";
 import { buildHarborPrecision } from "../src/data/harbor-precision.mjs";
+import catalogFile from "../src/data/catalog.json" with { type: "json" };
+import catalogMeta from "../src/data/catalog.meta.json" with { type: "json" };
+import { CatalogHashMismatch, scoreFromAssessment } from "../src/lib/score.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -23,6 +26,15 @@ const CLIENT_AUDIT_ACTIONS = new Set(["export", "reload-sample"]);
 const app = express();
 app.use(cors({ origin: LOCAL_VITE_ORIGIN }));
 app.use(express.json({ limit: "2mb" }));
+
+function scoreEnvelope(assessment) {
+  try {
+    return scoreFromAssessment(assessment, catalogFile.requirements, catalogMeta.catalogSha256);
+  } catch (err) {
+    if (err instanceof CatalogHashMismatch || err?.code === "catalog-hash-mismatch") return null;
+    throw err;
+  }
+}
 
 function logEvent(event, fields = {}) {
   const allowed = new Set(["status", "errorClass", "bytes", "port", "warningCount"]);
@@ -55,11 +67,11 @@ app.get("/api/assessment", (_req, res) => {
   }
   if (result.missing) {
     logEvent("assessment.load.miss", { status: 200 });
-    res.json({ assessment: null });
+    res.json({ assessment: null, score: null });
     return;
   }
   logEvent("assessment.load.ok", { status: 200 });
-  res.json({ assessment: result.package });
+  res.json({ assessment: result.package, score: scoreEnvelope(result.package) });
 });
 
 app.put("/api/assessment", (req, res) => {

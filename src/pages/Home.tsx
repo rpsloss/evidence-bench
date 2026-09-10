@@ -1,23 +1,30 @@
 import { Link } from "react-router-dom";
-import { scopeBlockers } from "../lib/scope.mjs";
+import { combinedBlockers, topBlockers } from "../lib/blockers.mjs";
 import { useAssessment } from "../lib/store";
+import type { CmmcStatus } from "../types";
+
+function statusLabel(status: CmmcStatus | undefined) {
+  if (status === "final-l2-self") return "Final";
+  if (status === "conditional-l2-self") return "Conditional";
+  if (status === "no-cmmc-status") return "No Status";
+  return "Incomplete";
+}
 
 export default function Home() {
-  const { assessment, loadSample } = useAssessment();
+  const { assessment, score, loadSample } = useAssessment();
   const org = assessment.organization;
-  const blockers = scopeBlockers(assessment);
-  const block = blockers.filter((b) => b.severity === "blocker");
-  const warn = blockers.filter((b) => b.severity === "warning");
-  const info = blockers.filter((b) => b.severity === "info");
+  const chips = topBlockers(assessment, score, 5);
+  const all = combinedBlockers(assessment, score);
   const official = org.affirmingOfficial;
+  const incomplete = !score || score.status === "assessment-incomplete";
 
   return (
     <div>
       <div className="kicker">Home · readiness</div>
       <h1>{org.name}</h1>
       <p>
-        Fictional CMMC Level 2 (Self) prep package. Sample data only. Scoring, catalog, and export arrive in later
-        PRs.
+        Fictional CMMC Level 2 (Self) prep package. Sample data only. Not a SPRS submission. Live score is local
+        math from the catalog — SPRS remains the system of record via human entry.
       </p>
       <div className="row">
         <Link className="btn primary" to="/scope">
@@ -43,14 +50,17 @@ export default function Home() {
           <div className="value" style={{ fontSize: "1.25rem" }}>
             {assessment.scope.kind === "enclave" ? "Enclave" : "Enterprise"}
           </div>
-          <div className="muted">{assessment.assets.length} assets · {assessment.flows.length} CUI flows</div>
+          <div className="muted">
+            {assessment.assets.length} assets · {assessment.flows.length} CUI flows
+          </div>
         </div>
         <div className="card kpi">
           <div className="label">Score</div>
-          <div className="value" style={{ fontSize: "1.05rem" }}>
-            later PR
+          <div className="value">{score ? score.raw : "—"}</div>
+          <div className="muted">
+            {statusLabel(score?.status)} · max 110
+            {incomplete ? " · not a SPRS score" : ""}
           </div>
-          <div className="muted">No live SPRS math yet</div>
         </div>
       </div>
 
@@ -62,13 +72,16 @@ export default function Home() {
         </p>
       </div>
 
-      <h2>Scope-graph blockers</h2>
-      <p>Graph checks only (OOS on an in-boundary flow, missing justifications). Not a SPRS score.</p>
+      <h2>Top blockers</h2>
+      <p>
+        Score chips plus scope-graph chips. MET stubs without evidence stay not-reviewed until the evidence PR.
+        {all.length > chips.length ? ` Showing 5 of ${all.length}.` : ""}
+      </p>
       <div className="list">
-        {blockers.length === 0 ? (
-          <div className="card">No scope-graph blockers on the current assets and flows.</div>
+        {chips.length === 0 ? (
+          <div className="card">No blockers on the current pack.</div>
         ) : (
-          [...block, ...warn, ...info].map((b) => (
+          chips.map((b) => (
             <Link key={b.id} className="blocker-item" to={b.href}>
               <span className={`pill ${b.severity}`}>{b.severity}</span>
               <h3>{b.title}</h3>

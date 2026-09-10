@@ -71,3 +71,11 @@ export function legalityForNotMet(
   finding: Finding,
   partialState: PartialState,
 ): ConditionalLegality;
+
+export function sspBodyOf(assessment: unknown): string;
+
+export function scoreFromAssessment(
+  assessment: unknown,
+  catalog: CatalogRequirement[],
+  expectedCatalogHash?: string | null,
+): AssessmentScore;

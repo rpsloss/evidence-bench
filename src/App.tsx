@@ -1,5 +1,6 @@
 import { NavLink, Route, Routes } from "react-router-dom";
 import { useAssessment } from "./lib/store";
+import type { CmmcStatus } from "./types";
 import Home from "./pages/Home";
 import Scope from "./pages/Scope";
 import Assets from "./pages/Assets";
@@ -8,6 +9,20 @@ import Evidence from "./pages/Evidence";
 import Ssp from "./pages/Ssp";
 import Poam from "./pages/Poam";
 import ExportPage from "./pages/Export";
+
+function statusLabel(status: CmmcStatus | undefined) {
+  if (status === "final-l2-self") return "Final";
+  if (status === "conditional-l2-self") return "Conditional";
+  if (status === "no-cmmc-status") return "No Status";
+  return "Incomplete";
+}
+
+function statusClass(status: CmmcStatus | undefined) {
+  if (status === "final-l2-self") return "ok";
+  if (status === "conditional-l2-self") return "warning";
+  if (status === "no-cmmc-status") return "blocker";
+  return "info";
+}
 
 const links = [
   ["/", "Home"],
@@ -21,7 +36,7 @@ const links = [
 ] as const;
 
 export default function App() {
-  const { assessment, loading, saving, lastSaved, error, warnings, readOnly } = useAssessment();
+  const { assessment, score, loading, saving, lastSaved, error, warnings, readOnly } = useAssessment();
 
   if (loading) {
     return (
@@ -80,7 +95,8 @@ export default function App() {
               <span className="pill">UNCLASSIFIED</span>
               <span className="pill">SAMPLE</span>
               <span className="pill">Not a SPRS submission</span>
-              <span className="pill info">scoring in a later PR</span>
+              <span className="pill">{score ? `${score.raw}/110` : "—"}</span>
+              <span className={`pill ${statusClass(score?.status)}`}>{statusLabel(score?.status)}</span>
             </div>
             <strong>UNCLASSIFIED · SAMPLE · Not a SPRS submission.</strong> Fictional seed only. Castleridge
             Solutions is Hawaiʻi-based. This app does not submit, sign, or affirm. Not a C3PAO tool.
