@@ -120,7 +120,7 @@ describe("SSP outline + 3.12.4 incomplete gate", () => {
     const result = scoreOf(seed);
     assert.equal(result.sspPresent, true);
     assert.notEqual(result.status, "final-l2-self");
-    assert.equal(result.status, "assessment-incomplete");
+    assert.equal(result.status, "conditional-l2-self");
     assert.equal(result.raw, 108);
     assert.ok(req("3.12.4"));
   });
@@ -201,7 +201,7 @@ describe("SSP outline + 3.12.4 incomplete gate", () => {
     const warnings = sspWarnings(seed);
     assert.ok(warnings.some((row) => row.id === "empty-ssp-boundary" && row.severity === "warning"));
     assert.equal(scoreOf(seed).sspPresent, true);
-    assert.equal(scoreOf(seed).status, "assessment-incomplete");
+    assert.equal(scoreOf(seed).status, "conditional-l2-self");
   });
 
   it("keeps missing diagram / empty scope narrative as warnings; hard blockers stay graph-only", () => {

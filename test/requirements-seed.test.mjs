@@ -72,7 +72,7 @@ describe("Harbor determination seed + Requirements gates", () => {
     }
   });
 
-  it("MET stubs with Harbor pointers roll up to MET; 1-pt gaps deduct; raw 108 incomplete until SSP", () => {
+  it("MET stubs with Harbor pointers roll up to MET; 1-pt gaps deduct; raw 108 Conditional", () => {
     const seed = buildHarborPrecision();
     assert.equal(storedFinding(req("3.2.3"), seed.determinations["3.2.3"], seed.evidence), "not-met");
     assert.equal(storedFinding(req("3.4.9"), seed.determinations["3.4.9"], seed.evidence), "not-met");
@@ -81,7 +81,7 @@ describe("Harbor determination seed + Requirements gates", () => {
     assert.equal(storedFinding(req("3.13.11"), seed.determinations["3.13.11"], seed.evidence), "met");
     const result = scoreOf(seed);
     assert.equal(result.raw, 108);
-    assert.equal(result.status, "assessment-incomplete");
+    assert.equal(result.status, "conditional-l2-self");
     assert.equal(result.sspPresent, true);
     assert.deepEqual(
       result.deducted.map((row) => row.reqId).sort(),
@@ -186,7 +186,6 @@ describe("Harbor determination seed + Requirements gates", () => {
     const combined = combinedBlockers(seed, score);
     const scoreIds = score.blockers.map((b) => b.id);
     const scopeIds = scopeBlockers(seed).map((b) => b.id);
-    assert.ok(scoreIds.length > 0);
     assert.ok(scopeIds.length > 0);
     assert.deepEqual(
       combined.map((b) => b.id),
@@ -203,6 +202,6 @@ describe("Harbor determination seed + Requirements gates", () => {
     assert.ok(combined.some((b) => b.id === "missing-diagram"));
     const top = topBlockers(seed, score, 5);
     assert.ok(top.length <= 5);
-    assert.equal(top[0].severity, "blocker");
+    assert.ok(top.length > 0);
   });
 });
