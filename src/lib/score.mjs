@@ -95,7 +95,29 @@ function blocker(id, severity, title, detail, href, citation) {
 }
 
 export function legalityForNotMet(req, finding, partialState) {
-  return conditionalLegality({ req, finding, partialState, deductedWeight: deductedWeight(req, partialState) });
+  return conditionalLegality({
+    req,
+    finding,
+    partialState,
+    deductedWeight: deductedWeight(req, partialState, finding),
+  });
+}
+
+/** Align stored finding with the MFA/FIPS table before deduct/status. */
+function scoringState(req, det, evidence, operationalPoas) {
+  const rolled = rollupRequirement(req, det, evidence, operationalPoas);
+  let finding = rolled.finding;
+  const partialState = req.partialCredit
+    ? derivePartialState(req, rolled.objectives, det?.fipsOverlay)
+    : finding === "not-reviewed"
+      ? "incomplete"
+      : finding === "not-met"
+        ? "none-5"
+        : "all-met";
+  if (req.partialCredit && partialState === "incomplete") finding = "not-reviewed";
+  const deductState =
+    finding === "not-met" && req.partialCredit && partialState === "all-met" ? "none-5" : partialState;
+  return { finding, partialState, deductState };
 }
 
 /**
@@ -134,15 +156,7 @@ export function score(input) {
     if (!req || typeof req !== "object") continue;
     const reqId = str(req.reqId);
     const det = determinations[reqId];
-    const rolled = rollupRequirement(req, det, evidence, operationalPoas);
-    const finding = rolled.finding;
-    const partialState = req.partialCredit
-      ? derivePartialState(req, rolled.objectives, det?.fipsOverlay)
-      : finding === "not-reviewed"
-        ? "incomplete"
-        : finding === "not-met"
-          ? "none-5"
-          : "all-met";
+    const { finding, deductState } = scoringState(req, det, evidence, operationalPoas);
 
     if (finding === "not-reviewed") {
       notReviewedCount += 1;
@@ -153,9 +167,9 @@ export function score(input) {
     if (finding !== "not-met") continue;
 
     notMetIds.push(reqId);
-    const weight = deductedWeight(req, partialState);
-    deducted.push({ reqId, weight, reason: reasonFor(req, partialState, weight) });
-    if (partialState === "contradictory") contradictoryMfa = true;
+    const weight = deductedWeight(req, deductState, finding);
+    deducted.push({ reqId, weight, reason: reasonFor(req, deductState, weight) });
+    if (deductState === "contradictory") contradictoryMfa = true;
   }
 
   const raw = MAX_SCORE - deducted.reduce((n, row) => n + row.weight, 0);
@@ -173,8 +187,7 @@ export function score(input) {
   for (const reqId of notMetIds) {
     const req = catalog.find((r) => r && str(r.reqId) === reqId);
     const det = determinations[reqId];
-    const rolled = rollupRequirement(req, det, evidence, operationalPoas);
-    const partialState = req?.partialCredit ? derivePartialState(req, rolled.objectives, det?.fipsOverlay) : null;
+    const { deductState } = scoringState(req, det, evidence, operationalPoas);
     const item = poamsByReq.get(reqId);
     if (!item) {
       everyNotMetHasPoam = false;
@@ -182,7 +195,12 @@ export function score(input) {
       everyPoamLegal = false;
       continue;
     }
-    const legality = conditionalLegality({ req, finding: "not-met", partialState });
+    const legality = conditionalLegality({
+      req,
+      finding: "not-met",
+      partialState: deductState,
+      deductedWeight: deductedWeight(req, deductState, "not-met"),
+    });
     if (legality.conditionalLegal !== true) {
       everyPoamLegal = false;
       illegal.push(reqId);

@@ -362,6 +362,46 @@ describe("score engine", () => {
     assert.equal(findingOf(withPoa, "3.2.3"), "met");
   });
 
+  it("3.5.3 [a] unanswered + [d] not-met → incomplete, no Conditional", () => {
+    const input = allMet();
+    setAo(input, "3.5.3", "a", "not-reviewed");
+    setAo(input, "3.5.3", "d", "not-met");
+    assert.equal(derivePartialState(req("3.5.3"), input.determinations["3.5.3"].objectives), "incomplete");
+    assert.equal(findingOf(input, "3.5.3"), "not-reviewed");
+    const inserted = insertPoam(input, "3.5.3", "not-met", "incomplete");
+    assert.equal(inserted.ok, true);
+    const result = score(input);
+    assert.equal(result.status, "assessment-incomplete");
+    assert.equal(result.conditionalEligible, false);
+    assert.equal(result.raw, 110);
+    assert.equal(
+      result.deducted.some((row) => row.reqId === "3.5.3"),
+      false,
+    );
+  });
+
+  it("T22 on 3.5.3 and 3.13.11 → not-met, deduct 5, not Conditional", () => {
+    for (const reqId of ["3.5.3", "3.13.11"]) {
+      const input = allMet();
+      input.determinations[reqId].temporaryDeficiency = true;
+      input.operationalPoas = [];
+      assert.equal(findingOf(input, reqId), "not-met", reqId);
+      const overlay = input.determinations[reqId].fipsOverlay;
+      const partial = derivePartialState(req(reqId), input.determinations[reqId].objectives, overlay);
+      assert.equal(partial, "all-met", reqId);
+      const inserted = insertPoam(input, reqId, "not-met", partial);
+      assert.equal(inserted.ok, true, reqId);
+      assert.equal(inserted.item.conditionalLegal, false, reqId);
+      const result = score(input);
+      assert.equal(result.status, "no-cmmc-status", reqId);
+      assert.equal(result.conditionalEligible, false, reqId);
+      const row = result.deducted.find((d) => d.reqId === reqId);
+      assert.ok(row, reqId);
+      assert.equal(row.weight, 5, reqId);
+      assert.equal(result.raw, 105, reqId);
+    }
+  });
+
   it("T24: 110 - sum(fullFailWeights) === -203; objectives.length === expectedAoCount; zero overlay rows", () => {
     const sum = catalog.reduce((n, r) => n + r.weight, 0);
     assert.equal(110 - sum, -203);

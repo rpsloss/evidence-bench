@@ -15,12 +15,18 @@ function asWeight(value, fallback) {
 
 /**
  * Catalog weight, except MFA/FIPS 0/3/5 from derivePartialState.
+ * A stored NOT MET partial-credit row never deducts 0 (keeper refusal → 5).
  * @param {object} req
  * @param {string | null | undefined} partialState
+ * @param {string | null | undefined} finding
  * @returns {0 | 1 | 3 | 5}
  */
-export function deductedWeight(req, partialState) {
+export function deductedWeight(req, partialState, finding) {
   if (req?.partialCredit) {
+    if (finding === "not-met") {
+      if (partialState === "partial-3") return 3;
+      return 5;
+    }
     if (partialState === "partial-3") return 3;
     if (partialState === "none-5" || partialState === "contradictory") return 5;
     if (partialState === "all-met" || partialState === "incomplete") return 0;
@@ -49,7 +55,7 @@ export function conditionalLegality(input) {
   const weight =
     input.deductedWeight === 0 || input.deductedWeight === 1 || input.deductedWeight === 3 || input.deductedWeight === 5
       ? input.deductedWeight
-      : deductedWeight(req, partialState);
+      : deductedWeight(req, partialState, finding);
   if (weight > 1) return { conditionalLegal: false, illegalCode: "weight-gt-1" };
   return { conditionalLegal: true };
 }

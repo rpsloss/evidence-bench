@@ -32,7 +32,11 @@ export type PoamGuardResult =
   | { ok: true; item: PoamItem }
   | { ok: false; reject: PoamInsertReject };
 
-export function deductedWeight(req: CatalogRequirement, partialState?: PartialState | null): Weight;
+export function deductedWeight(
+  req: CatalogRequirement,
+  partialState?: PartialState | null,
+  finding?: Finding | null,
+): Weight;
 
 export function conditionalLegality(input: {
   req: CatalogRequirement;

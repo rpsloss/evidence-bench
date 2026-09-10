@@ -80,6 +80,8 @@ export function rollupWouldBeFinding(req, objectives) {
   if (findings.every((f) => f === "na")) {
     return req?.naAllowed === true ? "na" : "not-reviewed";
   }
+  // MFA/FIPS table: any unanswered letter/overlay is incomplete even if another is not-met.
+  if (req?.partialCredit && findings.some((f) => f === "not-reviewed")) return "not-reviewed";
   if (findings.some((f) => f === "not-met")) return "not-met";
   if (findings.every((f) => MET_OR_NA.has(f))) return "met";
   return "not-reviewed";
