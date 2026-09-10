@@ -71,11 +71,20 @@ function unlinkPlaintextSibling(filePath) {
 }
 
 function backupPreviousGood(packagePath) {
-  const backupPath = `${packagePath}.bak`;
-  if (!fs.existsSync(packagePath) || fs.existsSync(backupPath)) return;
+  if (!fs.existsSync(packagePath)) return;
   const current = fs.readFileSync(packagePath);
   if (!isEncryptedBuffer(current)) return;
-  atomicWriteBuffer(backupPath, current);
+  atomicWriteBuffer(`${packagePath}.bak`, current);
+}
+
+function keyForSave(packagePath, options = {}) {
+  const keyPath = options.keyPath || resolveKeyPath(packagePath);
+  if (options.createKeyIfMissing) return loadOrCreateKey(keyPath);
+  if (fs.existsSync(packagePath)) {
+    const raw = fs.readFileSync(packagePath);
+    if (isEncryptedBuffer(raw)) return loadKey(keyPath);
+  }
+  return loadOrCreateKey(keyPath);
 }
 
 export function loadPackage(packagePath, options = {}) {
@@ -125,9 +134,11 @@ export function loadPackage(packagePath, options = {}) {
 }
 
 /**
- * Atomic save: serialize + validate, AES-256-GCM, backup previous good
- * ciphertext if none, write temp in the same directory, fsync, rename.
+ * Atomic save: serialize + validate, AES-256-GCM, snapshot current ciphertext
+ * to `.bak`, write temp in the same directory, fsync, rename.
  *
+ * Existing encrypted files require the current key (no mint-over-ciphertext)
+ * unless options.createKeyIfMissing is set (explicit seed/reload).
  * options.crashAfterTempWrite is test-only: leave the temp file and skip rename.
  * options.audit === false skips the access audit line.
  */
@@ -147,7 +158,7 @@ export function savePackage(packagePath, pkg, options = {}) {
   }
 
   const plain = Buffer.from(json, "utf8");
-  const key = loadOrCreateKey(options.keyPath || resolveKeyPath(packagePath));
+  const key = keyForSave(packagePath, options);
   const payload = encryptBuffer(plain, key);
 
   backupPreviousGood(packagePath);

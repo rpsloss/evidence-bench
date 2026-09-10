@@ -20,7 +20,7 @@ function emptyFlow(id: string, fromAssetId: string, toAssetId: string): CuiFlow 
 }
 
 export default function Assets() {
-  const { assessment, setAssessment } = useAssessment();
+  const { assessment, setAssessment, readOnly } = useAssessment();
   const [selAsset, setSelAsset] = useState<string | null>(assessment.assets[0]?.id ?? null);
   const [selFlow, setSelFlow] = useState<string | null>(assessment.flows[0]?.id ?? null);
   const asset = assessment.assets.find((a) => a.id === selAsset);
@@ -63,6 +63,7 @@ export default function Assets() {
         </div>
       ) : null}
 
+      <fieldset className="stack" disabled={readOnly}>
       <div className="row">
         <button
           type="button"
@@ -267,6 +268,7 @@ export default function Assets() {
           )}
         </div>
       </div>
+      </fieldset>
     </div>
   );
 }

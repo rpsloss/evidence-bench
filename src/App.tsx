@@ -21,7 +21,7 @@ const links = [
 ] as const;
 
 export default function App() {
-  const { assessment, loading, saving, lastSaved, error } = useAssessment();
+  const { assessment, loading, saving, lastSaved, error, warnings, readOnly } = useAssessment();
 
   if (loading) {
     return (
@@ -57,9 +57,20 @@ export default function App() {
             {assessment.organization.name} · CAGE {assessment.organization.cage}
           </div>
           <div style={{ marginTop: 8 }}>
-            {saving ? "Saving…" : lastSaved ? `Saved ${lastSaved}` : "Local encrypted store"}
+            {readOnly
+              ? "Read-only (load failed)"
+              : saving
+                ? "Saving…"
+                : lastSaved
+                  ? `Saved ${lastSaved}`
+                  : "Local encrypted store"}
           </div>
           {error ? <div style={{ color: "var(--red)", marginTop: 6 }}>{error}</div> : null}
+          {warnings.length > 0 ? (
+            <div style={{ color: "var(--amber)", marginTop: 6 }}>
+              {warnings.map((w) => w.message).join(" ")}
+            </div>
+          ) : null}
         </div>
       </aside>
       <main className="main">
@@ -75,6 +86,21 @@ export default function App() {
             Solutions is Hawaiʻi-based. This app does not submit, sign, or affirm. Not a C3PAO tool.
           </div>
         </div>
+        {readOnly ? (
+          <div className="banner conflict">
+            <div>
+              <strong>On-disk assessment is unreadable.</strong> Editing is disabled so a sample cannot overwrite
+              ciphertext. Use Reload Harbor Precision seed to replace it, or restore the local key.
+            </div>
+          </div>
+        ) : null}
+        {warnings.length > 0 ? (
+          <div className="banner warn">
+            <div>
+              <strong>Filename warning.</strong> {warnings.map((w) => w.message).join(" ")}
+            </div>
+          </div>
+        ) : null}
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/scope" element={<Scope />} />

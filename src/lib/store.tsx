@@ -9,8 +9,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { buildHarborPrecision } from "../data/harbor-precision";
+import { buildHarborPrecision } from "../data/harbor-precision.mjs";
 import type { Assessment } from "../types";
+
+export type SaveWarning = { field: string; message: string };
 
 type Store = {
   assessment: Assessment;
@@ -18,6 +20,8 @@ type Store = {
   saving: boolean;
   lastSaved: string | null;
   error: string | null;
+  warnings: SaveWarning[];
+  readOnly: boolean;
   setAssessment: (updater: (current: Assessment) => Assessment) => void;
   loadSample: () => void;
 };
@@ -34,6 +38,17 @@ export function reportAssessmentAccess(action: "export" | "reload-sample", bytes
   }).catch(() => {});
 }
 
+function warningList(data: unknown): SaveWarning[] {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return [];
+  const raw = (data as { warnings?: unknown }).warnings;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((row): row is SaveWarning => {
+    if (!row || typeof row !== "object") return false;
+    const rec = row as { field?: unknown; message?: unknown };
+    return typeof rec.field === "string" && typeof rec.message === "string";
+  });
+}
+
 async function fetchAssessment(): Promise<Assessment | null> {
   const res = await fetch("/api/assessment");
   if (!res.ok) throw new Error("Could not load assessment (HTTP " + res.status + ").");
@@ -47,7 +62,11 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<SaveWarning[]>([]);
+  const [readOnly, setReadOnly] = useState(false);
   const skip = useRef(true);
+  const readOnlyRef = useRef(false);
+  readOnlyRef.current = readOnly;
 
   useEffect(() => {
     let cancelled = false;
@@ -55,18 +74,28 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
       try {
         const existing = await fetchAssessment();
         if (cancelled) return;
-        if (existing) setAssessmentState(existing);
-        else {
-          const sample = buildHarborPrecision();
-          setAssessmentState(sample);
-          await fetch("/api/assessment", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ assessment: sample }),
-          });
+        if (existing) {
+          setAssessmentState(existing);
+          setReadOnly(false);
+          return;
         }
+        const sample = buildHarborPrecision();
+        setAssessmentState(sample);
+        const putRes = await fetch("/api/assessment", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ assessment: sample }),
+        });
+        const putData = await putRes.json().catch(() => ({}));
+        if (!putRes.ok) throw new Error("Could not save initial assessment (HTTP " + putRes.status + ").");
+        if (cancelled) return;
+        setWarnings(warningList(putData));
+        setReadOnly(false);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Load failed");
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Load failed");
+          setReadOnly(true);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -77,7 +106,7 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || readOnly) return;
     if (skip.current) {
       skip.current = false;
       return;
@@ -89,32 +118,38 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assessment }),
       })
-        .then((r) => {
-          if (!r.ok) throw new Error("Save failed");
+        .then(async (r) => {
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(typeof data.error === "string" ? data.error : "Save failed");
           setLastSaved(new Date().toLocaleTimeString());
+          setWarnings(warningList(data));
           setError(null);
         })
         .catch((e) => setError(e instanceof Error ? e.message : "Save failed"))
         .finally(() => setSaving(false));
     }, 450);
     return () => clearTimeout(t);
-  }, [assessment, loading]);
+  }, [assessment, loading, readOnly]);
 
   const setAssessment = useCallback((updater: (current: Assessment) => Assessment) => {
+    if (readOnlyRef.current) return;
     setAssessmentState((current) => updater(current));
   }, []);
 
   const loadSample = useCallback(() => {
-    skip.current = false;
     void (async () => {
       try {
         const res = await fetch("/api/seed", { method: "POST" });
-        if (!res.ok) throw new Error("Seed failed");
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Seed failed");
         const sample: Assessment = data.assessment ?? buildHarborPrecision();
         reportAssessmentAccess("reload-sample", new TextEncoder().encode(JSON.stringify(sample)).length);
+        skip.current = true;
         setAssessmentState(sample);
+        setReadOnly(false);
+        setWarnings([]);
         setError(null);
+        setLastSaved(new Date().toLocaleTimeString());
       } catch (e) {
         setError(e instanceof Error ? e.message : "Seed failed");
       }
@@ -122,8 +157,18 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ assessment, loading, saving, lastSaved, error, setAssessment, loadSample }),
-    [assessment, loading, saving, lastSaved, error, setAssessment, loadSample],
+    () => ({
+      assessment,
+      loading,
+      saving,
+      lastSaved,
+      error,
+      warnings,
+      readOnly,
+      setAssessment,
+      loadSample,
+    }),
+    [assessment, loading, saving, lastSaved, error, warnings, readOnly, setAssessment, loadSample],
   );
 
   return createElement(Ctx.Provider, { value }, children);

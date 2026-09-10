@@ -29,7 +29,7 @@ function Field({
 }
 
 export default function Scope() {
-  const { assessment, setAssessment } = useAssessment();
+  const { assessment, setAssessment, readOnly } = useAssessment();
   const org = assessment.organization;
   const scope = assessment.scope;
   const official = org.affirmingOfficial ?? { name: "", title: "", email: "" };
@@ -83,6 +83,7 @@ export default function Scope() {
         </div>
       ) : null}
 
+      <fieldset className="stack" disabled={readOnly}>
       <div className="card" style={{ marginBottom: 16 }}>
         <h2>Organization</h2>
         <div className="grid two">
@@ -156,6 +157,7 @@ export default function Scope() {
           helper="Unclass pointer only. Evidence registry arrives in a later PR."
         />
       </div>
+      </fieldset>
     </div>
   );
 }

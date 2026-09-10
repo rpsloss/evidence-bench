@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { buildHarborPrecision } from "../src/data/harbor-precision.mjs";
 import { scopeBlockers } from "../src/lib/scope.mjs";
 
 function base(overrides = {}) {
@@ -24,38 +25,6 @@ function base(overrides = {}) {
     flows: overrides.flows,
   };
 }
-
-const millHarbor = {
-  assets: [
-    { id: "cad-ws", name: "CAD workstation", category: "cui", justification: "", notes: "" },
-    { id: "mailbox", name: "Enclave mailbox", category: "cui", justification: "", notes: "" },
-    {
-      id: "cnc-mill",
-      name: "CNC mill",
-      category: "specialized",
-      specializedKind: "ot",
-      justification: "OT CNC; cannot fully secure; isolated from CUI enclave.",
-      notes: "",
-    },
-    {
-      id: "office-pcs",
-      name: "Office PCs",
-      category: "crma",
-      justification: "Policy forbids CUI on these workstations.",
-      notes: "",
-    },
-    {
-      id: "visitor-wifi",
-      name: "Visitor Wi-Fi",
-      category: "oos",
-      justification: "Isolated guest VLAN; no CUI.",
-      notes: "",
-    },
-  ],
-  flows: [
-    { id: "flow-cad-mail", fromAssetId: "cad-ws", toAssetId: "mailbox", channel: "email", inBoundary: true, notes: "" },
-  ],
-};
 
 describe("scope graph blockers", () => {
   it("flags an OOS asset on an in-boundary CUI flow as a blocker", () => {
@@ -94,7 +63,16 @@ describe("scope graph blockers", () => {
   });
 
   it("does not emit an OOS-in-flow blocker when the Harbor mill is specialized and off the CUI path", () => {
-    const blockers = scopeBlockers(base(millHarbor));
+    const seed = buildHarborPrecision();
+    const mill = seed.assets.find((a) => a.id === "cnc-mill");
+    assert.equal(mill?.category, "specialized");
+    assert.equal(
+      seed.flows.some(
+        (f) => f.inBoundary === true && (f.fromAssetId === "cnc-mill" || f.toAssetId === "cnc-mill"),
+      ),
+      false,
+    );
+    const blockers = scopeBlockers(seed);
     assert.equal(
       blockers.some((b) => b.id.startsWith("oos-in-flow")),
       false,
@@ -106,26 +84,19 @@ describe("scope graph blockers", () => {
   });
 
   it("treats a missing diagram pointer as a warning, not a blocker", () => {
-    const withDiagram = scopeBlockers(base(millHarbor));
+    const seed = buildHarborPrecision();
+    assert.equal(seed.scope.diagramEvidenceId, null);
+    const missing = scopeBlockers(seed).filter((b) => b.id === "missing-diagram");
+    assert.equal(missing.length, 1);
+    assert.equal(missing[0].severity, "warning");
+
+    const withDiagram = scopeBlockers({
+      ...seed,
+      scope: { ...seed.scope, diagramEvidenceId: "diagram-1" },
+    });
     assert.equal(
       withDiagram.some((b) => b.id === "missing-diagram"),
       false,
     );
-
-    const missing = scopeBlockers(
-      base({
-        ...millHarbor,
-        scope: {
-          kind: "enclave",
-          narrative: "enclave",
-          isolationSummary: "isolated",
-          cuiCategoriesGeneric: [],
-          diagramEvidenceId: null,
-        },
-      }),
-    );
-    const diagram = missing.filter((b) => b.id === "missing-diagram");
-    assert.equal(diagram.length, 1);
-    assert.equal(diagram[0].severity, "warning");
   });
 });
