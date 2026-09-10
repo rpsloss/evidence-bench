@@ -2,6 +2,7 @@
 
 import catalogFile from "../data/catalog.json" with { type: "json" };
 import catalogMeta from "../data/catalog.meta.json" with { type: "json" };
+import { handoffMarkdown } from "./familyProgress.mjs";
 import { deductedWeight } from "./poamGuard.mjs";
 import { effectiveObjectives, evidenceSupportsMet, rollupRequirement, storedFindings } from "./rollup.mjs";
 import { scopeBlockers } from "./scope.mjs";
@@ -33,9 +34,20 @@ export const POAM_CSV_COLUMNS = "reqId,cmmcId,weight,conditionalLegal,illegalCod
 
 export const EXPORT_FILENAMES = Object.freeze([
   "README.md",
+  "HANDOFF.md",
   "ssp.md",
   "checklist.md",
   "sprs-manual-entry.csv",
+  "scope.csv",
+  "poam.csv",
+  "assessment.json",
+]);
+
+export const SNAPSHOT_FILENAMES = Object.freeze([
+  "README.md",
+  "HANDOFF.md",
+  "ssp.md",
+  "checklist.md",
   "scope.csv",
   "poam.csv",
   "assessment.json",
@@ -522,6 +534,28 @@ function readmeMd(assessment, score, checklist, ready) {
     red.length ? `- Unsatisfied checklist rows: ${red.join(", ")}` : "- Frozen checklist: all rows satisfied",
     "",
     "Type sprs-manual-entry.csv into SPRS by hand. Not a SPRS submission.",
+    "HANDOFF.md is the assembler cover sheet for the AO/SCA. Completion status is unfinished / partial / gapped / present — not a SPRS finding.",
+    SAMPLE_WATERMARK,
+    "",
+  ].join("\n");
+}
+
+function snapshotReadme(assessment, score) {
+  const org = orgOf(assessment);
+  const status = score?.status || "assessment-incomplete";
+  return [
+    SAMPLE_WATERMARK,
+    "",
+    "# Evidence Bench assembler snapshot (SAMPLE)",
+    "",
+    CHECKLIST_PREFIX,
+    "Mid-cycle QC pack for the AO/SCA. This zip is allowed while families are unfinished or partial.",
+    "It does not include sprs-manual-entry.csv. That file lives only in the SPRS-prep zip, which still refuses unanswered objectives.",
+    "The app never submits, signs, or affirms.",
+    "",
+    `- Organization: ${str(org.name) || "(unnamed)"}`,
+    `- Score: ${score ? `${score.raw}/110` : "—"} (${status})`,
+    "",
     SAMPLE_WATERMARK,
     "",
   ].join("\n");
@@ -629,6 +663,7 @@ export function buildExportPack(input = {}) {
 
   const files = {
     "README.md": readmeMd(assessment, score, checklist, ready),
+    "HANDOFF.md": handoffMarkdown(assessment, score, catalog),
     "ssp.md": sspMd(assessment),
     "checklist.md": checklistMd(checklist),
     "sprs-manual-entry.csv": csvTable(SPRS_CSV_COLUMNS, sprs),
@@ -657,6 +692,52 @@ export function buildExportPack(input = {}) {
     watermark: SAMPLE_WATERMARK,
     manifest: {
       id: `export-${createdAt}`,
+      createdAt,
+      watermark: SAMPLE_WATERMARK,
+      files: manifestFiles,
+    },
+  };
+}
+
+/** Mid-cycle AO/SCA pack. Never includes sprs-manual-entry.csv. Allowed while families are unfinished or partial. */
+export function buildAssemblerSnapshot(input = {}) {
+  const assessment = input?.assessment;
+  const catalog = catalogReqs(input?.catalog).length ? input.catalog : catalogFile.requirements;
+  const expectedHash = input?.expectedCatalogHash === undefined ? catalogMeta.catalogSha256 : input.expectedCatalogHash;
+  const createdAt = str(input?.createdAt) || new Date().toISOString();
+  if (!assessment || typeof assessment !== "object") return refuse("assessment-missing", [], false);
+  const ready = exportReady(assessment);
+  const score = scoreOf(assessment, catalog, expectedHash);
+  const checklist = affirmationChecklist(assessment, score, catalog);
+  const files = {
+    "README.md": snapshotReadme(assessment, score),
+    "HANDOFF.md": handoffMarkdown(assessment, score, catalog),
+    "ssp.md": sspMd(assessment),
+    "checklist.md": checklistMd(checklist),
+    "scope.csv": csvTable(SCOPE_CSV_COLUMNS, [scopeRow(assessment)]),
+    "poam.csv": csvTable(POAM_CSV_COLUMNS, poamRows(catalog, assessment)),
+    "assessment.json": packJson(assessment, score, checklist, ready, createdAt),
+  };
+  const entries = [];
+  const manifestFiles = [];
+  for (const name of SNAPSHOT_FILENAMES) {
+    const text = files[name];
+    const body = utf8(text);
+    entries.push({ name, body });
+    manifestFiles.push({ name, bytes: body.length, sha256: "" });
+  }
+  const zip = zipStore(entries, createdAt ? new Date(createdAt) : new Date());
+  return {
+    ok: true,
+    error: null,
+    checklist,
+    exportReady: ready,
+    zip,
+    files,
+    filename: "evidence-bench-assembler-snapshot.zip",
+    watermark: SAMPLE_WATERMARK,
+    manifest: {
+      id: `snapshot-${createdAt}`,
       createdAt,
       watermark: SAMPLE_WATERMARK,
       files: manifestFiles,

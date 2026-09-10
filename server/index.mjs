@@ -10,7 +10,7 @@ import { buildHarborPrecision } from "../src/data/harbor-precision.mjs";
 import catalogFile from "../src/data/catalog.json" with { type: "json" };
 import catalogMeta from "../src/data/catalog.meta.json" with { type: "json" };
 import { CatalogHashMismatch, scoreFromAssessment } from "../src/lib/score.mjs";
-import { emitSampleExport, sendExportResponse } from "./emitApi.mjs";
+import { emitAssemblerSnapshot, emitSampleExport, sendExportResponse } from "./emitApi.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -19,7 +19,7 @@ const defaultAssessmentPath = path.join(dataDir, "assessment.json.enc");
 
 const LISTEN_HOST = "127.0.0.1";
 const LOCAL_VITE_ORIGIN = "http://127.0.0.1:5173";
-const CLIENT_AUDIT_ACTIONS = new Set(["export", "reload-sample"]);
+const CLIENT_AUDIT_ACTIONS = new Set(["export", "snapshot", "reload-sample"]);
 
 function scoreEnvelope(assessment) {
   try {
@@ -160,6 +160,29 @@ export function createApp(options = {}) {
     }
     logEvent("export.ok", { status: 200, bytes: pack.zip.length });
     appendAudit(auditPath, { action: "export", outcome: "ok", bytesIn: 0, bytesOut: pack.zip.length });
+    sendExportResponse(res, pack);
+  });
+
+  app.post("/api/snapshot", (_req, res) => {
+    const loaded = loadPackage(assessmentPath);
+    if (!loaded.ok) {
+      logEvent("assessment.load.fail", { status: 500, errorClass: loaded.errorClass });
+      res.status(500).json({ error: "assessment-unreadable", errorClass: loaded.errorClass });
+      return;
+    }
+    if (loaded.missing || !loaded.package) {
+      logEvent("snapshot.refused", { status: 400, errorClass: "assessment-missing" });
+      sendExportResponse(res, { ok: false, error: "assessment-missing", checklist: [], exportReady: false });
+      return;
+    }
+    const pack = emitAssemblerSnapshot(loaded.package);
+    if (!pack.ok) {
+      logEvent("snapshot.refused", { status: 400, errorClass: pack.error || "export-refused" });
+      sendExportResponse(res, pack);
+      return;
+    }
+    logEvent("snapshot.ok", { status: 200, bytes: pack.zip.length });
+    appendAudit(auditPath, { action: "snapshot", outcome: "ok", bytesIn: 0, bytesOut: pack.zip.length });
     sendExportResponse(res, pack);
   });
 

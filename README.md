@@ -20,6 +20,8 @@ npm run dev
 
 Open [http://127.0.0.1:5173](http://127.0.0.1:5173). The API listens on **127.0.0.1:8787** (loopback only). CORS is limited to the Vite origin.
 
+Home shows an assembler board per NIST family: **unfinished / partial / gapped / present**. That is work status for the person compiling the pack, not a SPRS finding. Export still refuses `sprs-manual-entry.csv` while any objective is unanswered. `POST /api/snapshot` always emits a SAMPLE zip with `HANDOFF.md` for the AO/SCA, and omits the SPRS CSV.
+
 Production-style (after `npm run build`):
 
 ```bash

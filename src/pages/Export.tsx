@@ -9,6 +9,7 @@ import {
   markExportReady,
   SAMPLE_WATERMARK,
 } from "../lib/exportPack.mjs";
+import { completionLabel, familyProgressRows } from "../lib/familyProgress.mjs";
 import { reportAssessmentAccess, useAssessment } from "../lib/store";
 
 export default function ExportPage() {
@@ -26,6 +27,10 @@ export default function ExportPage() {
     }
     return map;
   }, [assessment.familyReviews]);
+  const progressByFamily = useMemo(
+    () => new Map(familyProgressRows(assessment).map((row) => [row.family, row])),
+    [assessment],
+  );
 
   function markPrep() {
     if (readOnly) return;
@@ -38,12 +43,12 @@ export default function ExportPage() {
     setAssessment(() => next.assessment);
   }
 
-  async function downloadZip() {
-    if (!zipOk || busy) return;
+  async function downloadNamedZip(path: string, fallbackName: string, action: "export" | "snapshot") {
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/export", { method: "POST" });
+      const res = await fetch(path, { method: "POST" });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         if (data.error === "not-reviewed") {
@@ -54,11 +59,11 @@ export default function ExportPage() {
         return;
       }
       const blob = await res.blob();
-      reportAssessmentAccess("export", blob.size);
+      reportAssessmentAccess(action, blob.size);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "evidence-bench-sample.zip";
+      a.download = fallbackName;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -66,6 +71,15 @@ export default function ExportPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function downloadZip() {
+    if (!zipOk) return;
+    await downloadNamedZip("/api/export", "evidence-bench-sample.zip", "export");
+  }
+
+  async function downloadSnapshot() {
+    await downloadNamedZip("/api/snapshot", "evidence-bench-assembler-snapshot.zip", "snapshot");
   }
 
   return (
@@ -110,6 +124,14 @@ export default function ExportPage() {
               example a temporary deficiency without an operational POA) is exportable.
             </p>
           ) : null}
+          <p className="helper">
+            Assembler snapshot is allowed while families are unfinished or partial. It omits sprs-manual-entry.csv.
+          </p>
+          <div className="row">
+            <button type="button" disabled={busy || readOnly} onClick={() => void downloadSnapshot()}>
+              {busy ? "Building…" : "Download assembler snapshot"}
+            </button>
+          </div>
         </div>
         <div className="card">
           <h2>Export-ready (local prep)</h2>
@@ -136,6 +158,7 @@ export default function ExportPage() {
           <thead>
             <tr>
               <th>Family</th>
+              <th>Completion</th>
               <th>Reviewed</th>
               <th>Reviewer</th>
             </tr>
@@ -143,11 +166,20 @@ export default function ExportPage() {
           <tbody>
             {FAMILY_IDS.map((id) => {
               const row = reviewByFamily.get(id);
+              const progress = progressByFamily.get(id);
               const ok = row?.reviewed === true;
+              const completion = progress?.completion || "unfinished";
               return (
                 <tr key={id} className={ok ? undefined : "unsatisfied"}>
                   <td className="mono">
-                    <Link to="/requirements">{id}</Link>
+                    <Link to={`/requirements?family=${id}`}>{id}</Link>
+                  </td>
+                  <td>
+                    <span
+                      className={`pill ${completion === "present" ? "ok" : completion === "partial" ? "info" : completion === "gapped" ? "warning" : "blocker"}`}
+                    >
+                      {completionLabel(completion)}
+                    </span>
                   </td>
                   <td>
                     <span className={`pill ${ok ? "ok" : "blocker"}`}>{ok ? "reviewed" : "not reviewed"}</span>

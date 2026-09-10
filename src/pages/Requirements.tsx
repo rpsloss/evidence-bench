@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import catalogFile from "../data/catalog.json";
 import {
   FAMILIES,
@@ -6,6 +7,7 @@ import {
   reviewForFamily,
   upsertFamilyReview,
 } from "../lib/familyReview.mjs";
+import { completionLabel, familyProgressRows } from "../lib/familyProgress.mjs";
 import {
   deriveFipsAoFinding,
   effectiveObjectives,
@@ -145,15 +147,31 @@ function FindingSelect({
 
 export default function Requirements() {
   const { assessment, score, setAssessment, readOnly } = useAssessment();
+  const [params] = useSearchParams();
   const [family, setFamily] = useState("AC");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [naError, setNaError] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const wanted = (params.get("family") || "").trim().toUpperCase();
+    if (FAMILIES.some((row) => row.id === wanted)) {
+      setFamily(wanted);
+      setSelectedId(null);
+      setNaError(null);
+      setReviewError(null);
+    }
+  }, [params]);
+
   const familyReqs = useMemo(() => CATALOG.filter((row) => row.family === family), [family]);
   const selected = familyReqs.find((row) => row.reqId === selectedId) ?? null;
   const familyMeta = FAMILIES.find((row) => row.id === family);
   const familyReview = reviewForFamily(assessment.familyReviews, family);
+  const progressByFamily = useMemo(
+    () => new Map(familyProgressRows(assessment).map((row) => [row.family, row])),
+    [assessment],
+  );
+  const familyProgress = progressByFamily.get(family);
 
   function derivedFinding(req: CatalogRequirement): Finding {
     return rollupRequirement(req, assessment.determinations[req.reqId], assessment.evidence, assessment.operationalPoas)
@@ -279,14 +297,16 @@ export default function Requirements() {
       <div className="family-tabs" role="tablist" aria-label="Requirement families">
         {FAMILIES.map((row) => {
           const reviewed = reviewForFamily(assessment.familyReviews, row.id).reviewed;
+          const progress = progressByFamily.get(row.id);
+          const completion = progress?.completion || "unfinished";
           return (
             <button
               key={row.id}
               type="button"
               role="tab"
               aria-selected={family === row.id}
-              title={reviewed ? `${row.id} reviewed` : `${row.id} not reviewed`}
-              className={`${family === row.id ? "active" : ""}${reviewed ? " reviewed" : ""}`}
+              title={`${row.id} ${completionLabel(completion)}${reviewed ? " · reviewed" : ""}`}
+              className={`${family === row.id ? "active" : ""}${reviewed ? " reviewed" : ""} ${completion}`}
               onClick={() => {
                 setFamily(row.id);
                 setSelectedId(null);
@@ -306,7 +326,12 @@ export default function Requirements() {
           {family} · {familyMeta?.name}
         </h2>
         <p className="muted" style={{ marginBottom: 0 }}>
-          {familyReqs.length} requirements. Live score {score ? `${score.raw}/110` : "—"}.
+          {familyReqs.length} requirements. Live score {score ? `${score.raw}/110` : "—"}. Completion:{" "}
+          {completionLabel(familyProgress?.completion || "unfinished")}
+          {familyProgress
+            ? ` · ${familyProgress.unansweredAos} of ${familyProgress.aoCount} objectives unanswered`
+            : ""}
+          {familyProgress?.evidenceGaps ? ` · ${familyProgress.evidenceGaps} evidence gaps` : ""}.
         </p>
       </div>
 

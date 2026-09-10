@@ -24,9 +24,19 @@ export const SCOPE_CSV_COLUMNS: "kind,employeeCount,cage,fictional,orgName";
 export const POAM_CSV_COLUMNS: "reqId,cmmcId,weight,conditionalLegal,illegalCode,weakness,owner,due,status";
 export const EXPORT_FILENAMES: readonly [
   "README.md",
+  "HANDOFF.md",
   "ssp.md",
   "checklist.md",
   "sprs-manual-entry.csv",
+  "scope.csv",
+  "poam.csv",
+  "assessment.json",
+];
+export const SNAPSHOT_FILENAMES: readonly [
+  "README.md",
+  "HANDOFF.md",
+  "ssp.md",
+  "checklist.md",
   "scope.csv",
   "poam.csv",
   "assessment.json",
@@ -100,6 +110,13 @@ export function markExportReady(
 ): { ok: true; assessment: Assessment } | { ok: false; error: "family-reviews" };
 
 export function buildExportPack(input?: {
+  assessment?: Assessment | null;
+  catalog?: CatalogRequirement[];
+  expectedCatalogHash?: string | null;
+  createdAt?: string;
+}): ExportPackResult;
+
+export function buildAssemblerSnapshot(input?: {
   assessment?: Assessment | null;
   catalog?: CatalogRequirement[];
   expectedCatalogHash?: string | null;

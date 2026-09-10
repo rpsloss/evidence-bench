@@ -94,6 +94,34 @@ a { color: var(--gold); }
 .grid.three { grid-template-columns: repeat(3, 1fr); }
 .grid.kpi { grid-template-columns: repeat(4, 1fr); margin-bottom: 1rem; }
 .grid.gaps { grid-template-columns: repeat(5, 1fr); margin-bottom: 1rem; }
+.grid.families {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin-bottom: 0;
+}
+.family-cell {
+  display: grid;
+  gap: 0.25rem;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--line);
+  background: var(--bg-elev-2);
+  border-radius: 8px;
+  padding: 0.55rem 0.5rem;
+  min-height: 4.6rem;
+}
+.family-cell:hover { border-color: var(--gold-dim); }
+.family-cell.present { border-color: var(--green); }
+.family-cell.partial { border-color: var(--blue); }
+.family-cell.gapped { border-color: var(--amber); }
+.family-cell.unfinished { border-color: var(--red); }
+.family-tabs button.partial:not(.active) { border-color: var(--blue); }
+.family-tabs button.gapped:not(.active) { border-color: var(--amber); }
+.family-tabs button.unfinished:not(.active) { border-color: var(--red); }
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+  .nav { position: static; height: auto; }
+  .grid.kpi, .grid.gaps, .grid.two, .grid.families { grid-template-columns: 1fr 1fr; }
+}
 
 .card {
   background: var(--bg-elev);

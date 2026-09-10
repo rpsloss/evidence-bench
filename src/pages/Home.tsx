@@ -5,6 +5,7 @@ import {
   familyReviewRows,
   reviewedFamilyCount,
 } from "../lib/familyReview.mjs";
+import { completionLabel, familyProgressBoard } from "../lib/familyProgress.mjs";
 import { useAssessment } from "../lib/store";
 import type { CmmcStatus } from "../types";
 
@@ -33,6 +34,7 @@ export default function Home() {
   const allReviewed = allFamiliesReviewed(assessment.familyReviews);
   const remaining = reviews.length - reviewedCount;
   const prepReady = allReviewed && Boolean(assessment.prepMarkedAt);
+  const board = familyProgressBoard(assessment);
 
   function markPrep() {
     setAssessment((a) => {
@@ -63,6 +65,9 @@ export default function Home() {
         <Link className="btn" to="/export">
           Export
         </Link>
+        <Link className="btn primary" to={board.next.href}>
+          {board.next.title}
+        </Link>
       </div>
       <div className="grid kpi">
         <div className="card kpi">
@@ -91,6 +96,50 @@ export default function Home() {
             {statusLabel(score?.status)} · max 110
             {incomplete ? " · not a SPRS score" : ""}
           </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h2>Assembler board</h2>
+        <p>
+          Completion is unfinished, partial, gapped, or present — not a SPRS finding. {board.next.detail} Consultant
+          review is a separate flag.
+        </p>
+        <div className="grid kpi" style={{ marginBottom: 12 }}>
+          <div className="card kpi">
+            <div className="label">Present</div>
+            <div className="value">{board.counts.present}</div>
+          </div>
+          <div className="card kpi">
+            <div className="label">Partial</div>
+            <div className="value">{board.counts.partial}</div>
+          </div>
+          <div className="card kpi">
+            <div className="label">Gapped</div>
+            <div className="value">{board.counts.gapped}</div>
+          </div>
+          <div className="card kpi">
+            <div className="label">Unfinished</div>
+            <div className="value">{board.counts.unfinished}</div>
+          </div>
+        </div>
+        <div className="grid families">
+          {board.families.map((row) => (
+            <Link
+              key={row.family}
+              className={`family-cell ${row.completion}`}
+              to={`/requirements?family=${row.family}`}
+            >
+              <span className="mono">{row.family}</span>
+              <span className={`pill ${row.completion === "present" ? "ok" : row.completion === "partial" ? "info" : row.completion === "gapped" ? "warning" : "blocker"}`}>
+                {completionLabel(row.completion)}
+              </span>
+              <span className="muted">
+                {row.unansweredAos}/{row.aoCount} open
+                {row.reviewed ? " · reviewed" : ""}
+              </span>
+            </Link>
+          ))}
         </div>
       </div>
 

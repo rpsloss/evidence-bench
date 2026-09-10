@@ -45,8 +45,8 @@ type Store = {
 
 const Ctx = createContext<Store | null>(null);
 
-export function reportAssessmentAccess(action: "export" | "reload-sample", bytes = 0) {
-  if (action !== "export" && action !== "reload-sample") return;
+export function reportAssessmentAccess(action: "export" | "snapshot" | "reload-sample", bytes = 0) {
+  if (action !== "export" && action !== "snapshot" && action !== "reload-sample") return;
   const n = typeof bytes === "number" && Number.isFinite(bytes) && bytes >= 0 ? Math.floor(bytes) : 0;
   void fetch("/api/access-audit", {
     method: "POST",
