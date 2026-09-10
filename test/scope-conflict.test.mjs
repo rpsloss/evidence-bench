@@ -99,4 +99,21 @@ describe("scope graph blockers", () => {
       false,
     );
   });
+
+  it("treats an empty boundary narrative as a warning, not a blocker", () => {
+    const seed = buildHarborPrecision();
+    assert.ok(String(seed.scope.narrative).trim());
+    assert.equal(
+      scopeBlockers(seed).some((b) => b.id === "empty-boundary"),
+      false,
+    );
+    const empty = scopeBlockers({
+      ...seed,
+      scope: { ...seed.scope, narrative: "   " },
+    });
+    const hit = empty.filter((b) => b.id === "empty-boundary");
+    assert.equal(hit.length, 1);
+    assert.equal(hit[0].severity, "warning");
+    assert.equal(hit[0].href, "/scope");
+  });
 });

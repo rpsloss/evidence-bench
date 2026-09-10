@@ -328,7 +328,8 @@ export function sspBodyOf(assessment) {
     const title = str(row.title);
     return key === "req:3.12.4" || id.includes("3.12.4") || title.includes("3.12.4");
   });
-  if (hit && typeof hit.body === "string") return hit.body;
+  // A present-but-empty 3.12.4 section is empty; do not fall back to other stubs.
+  if (hit) return str(hit.body);
   return sections.map((row) => str(row?.body)).join("\n");
 }
 

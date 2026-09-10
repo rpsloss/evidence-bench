@@ -123,9 +123,18 @@ export interface OperationalPoaItem {
   owner: string;
 }
 
+export type SspSectionKey =
+  | "purpose"
+  | "boundary"
+  | "environment"
+  | "cui-flows"
+  | "roles"
+  | "inheritance-esp"
+  | `req:${string}`;
+
 export interface SspSection {
   id: string;
-  key: string;
+  key: SspSectionKey | string;
   title: string;
   body: string;
   generatedFrom: string;

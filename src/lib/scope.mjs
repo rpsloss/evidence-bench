@@ -65,13 +65,23 @@ export function scopeBlockers(assessment) {
     });
   }
 
-  const diagram = assessment.scope && typeof assessment.scope === "object" ? assessment.scope.diagramEvidenceId : null;
+  const scope = assessment.scope && typeof assessment.scope === "object" ? assessment.scope : null;
+  const diagram = scope ? scope.diagramEvidenceId : null;
   if (!str(diagram).trim()) {
     blockers.push({
       id: "missing-diagram",
       severity: "warning",
       title: "Missing network diagram pointer",
       detail: "No diagram URI / evidence id is set on Scope. Unclass pointer only.",
+      href: "/scope",
+    });
+  }
+  if (!str(scope?.narrative).trim()) {
+    blockers.push({
+      id: "empty-boundary",
+      severity: "warning",
+      title: "Empty boundary body",
+      detail: "Assessment Scope has no boundary narrative. Feeds the SSP boundary stub. Not NLP.",
       href: "/scope",
     });
   }

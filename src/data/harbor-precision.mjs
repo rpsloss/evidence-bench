@@ -1,7 +1,8 @@
-/** Fictional Harbor Precision org/scope/assets/flows + determination + evidence layers. */
+/** Fictional Harbor Precision org/scope/assets/flows, evidence, POA&M, and SSP outline. */
 
 import catalogFile from "./catalog.json" with { type: "json" };
 import catalogMeta from "./catalog.meta.json" with { type: "json" };
+import { generateSspOutline } from "../lib/sspGenerate.mjs";
 
 const NOT_MET_SEED = new Set(["3.2.3", "3.4.9"]);
 const EVIDENCE_CAPTURED = "2026-08-01T00:00:00Z";
@@ -123,7 +124,7 @@ function harborPoam(reqId, weakness, tasks) {
 }
 
 export function buildHarborPrecision() {
-  return {
+  const assessment = {
     id: "asmt-harbor-precision-l2-self",
     standard: "NIST-SP-800-171-R2",
     catalogHash: catalogMeta.catalogSha256,
@@ -241,4 +242,7 @@ export function buildHarborPrecision() {
     prepMarkedAt: null,
     schemaVersion: 1,
   };
+  // 3.12.4 body must be present so clearing it can demonstrate assessment-incomplete.
+  assessment.ssp = generateSspOutline(assessment);
+  return assessment;
 }

@@ -82,7 +82,7 @@ describe("Harbor determination seed + Requirements gates", () => {
     const result = scoreOf(seed);
     assert.equal(result.raw, 108);
     assert.equal(result.status, "assessment-incomplete");
-    assert.equal(result.sspPresent, false);
+    assert.equal(result.sspPresent, true);
     assert.deepEqual(
       result.deducted.map((row) => row.reqId).sort(),
       ["3.2.3", "3.4.9"],
@@ -192,7 +192,10 @@ describe("Harbor determination seed + Requirements gates", () => {
       combined.map((b) => b.id),
       [...scoreIds, ...scopeIds],
     );
-    assert.ok(combined.some((b) => b.id === "ssp-missing"));
+    assert.equal(
+      combined.some((b) => b.id === "ssp-missing"),
+      false,
+    );
     assert.equal(
       combined.some((b) => b.id === "not-reviewed"),
       false,
