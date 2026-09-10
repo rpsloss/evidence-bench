@@ -295,6 +295,7 @@ export default function Requirements() {
               }}
             >
               {row.id}
+              {reviewed ? " ✓" : ""}
             </button>
           );
         })}
@@ -373,7 +374,15 @@ export default function Requirements() {
           <input
             id={`reviewer-${family}`}
             value={familyReview.reviewer}
-            onChange={(e) => patchFamilyReview({ reviewer: e.target.value })}
+            onChange={(e) => {
+              const reviewer = e.target.value;
+              if (familyReview.reviewed && !reviewer.trim()) {
+                setReviewError("Reviewer name is required to keep this family reviewed.");
+              } else {
+                setReviewError(null);
+              }
+              patchFamilyReview({ reviewer });
+            }}
             placeholder="Consultant name (sample)"
           />
           <div className="muted" style={{ marginBottom: 12 }}>

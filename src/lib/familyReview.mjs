@@ -36,14 +36,21 @@ export function emptyFamilyReview(family) {
   };
 }
 
+/** reviewed is true only with a non-empty reviewer name. Keep reviewedAt. */
+export function isFamilyReviewed(row) {
+  if (!row || typeof row !== "object" || Array.isArray(row)) return false;
+  return row.reviewed === true && str(row.reviewer).trim().length > 0;
+}
+
 function coerceReview(row, family) {
   const base = emptyFamilyReview(family);
   if (!row || typeof row !== "object" || Array.isArray(row)) return base;
+  const reviewer = typeof row.reviewer === "string" ? row.reviewer : "";
   const reviewedAt = str(row.reviewedAt).trim();
   return {
     family,
-    reviewed: row.reviewed === true,
-    reviewer: typeof row.reviewer === "string" ? row.reviewer : "",
+    reviewed: row.reviewed === true && reviewer.trim().length > 0,
+    reviewer,
     reviewedAt: reviewedAt || null,
     notes: typeof row.notes === "string" ? row.notes : "",
   };
@@ -81,11 +88,11 @@ export function familyReviewRows(raw) {
 }
 
 export function allFamiliesReviewed(raw) {
-  return normalizeFamilyReviews(raw).every((row) => row.reviewed === true);
+  return normalizeFamilyReviews(raw).every(isFamilyReviewed);
 }
 
 export function reviewedFamilyCount(raw) {
-  return normalizeFamilyReviews(raw).filter((row) => row.reviewed === true).length;
+  return normalizeFamilyReviews(raw).filter(isFamilyReviewed).length;
 }
 
 /** prepMarkedAt stays null until every family is reviewed. Not a CMMC Status Date. */

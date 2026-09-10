@@ -4,6 +4,7 @@ export const FAMILIES: readonly { id: string; name: string }[];
 export const FAMILY_IDS: readonly string[];
 
 export function emptyFamilyReview(family: string): FamilyReview;
+export function isFamilyReviewed(row: unknown): boolean;
 export function normalizeFamilyReviews(raw: unknown): FamilyReview[];
 export function reviewForFamily(raw: unknown, family: string): FamilyReview;
 export function familyReviewRows(

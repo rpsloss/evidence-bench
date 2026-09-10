@@ -11,6 +11,7 @@ import {
   allFamiliesReviewed,
   familyReviewRows,
   gatedPrepMarkedAt,
+  isFamilyReviewed,
   normalizeFamilyReviews,
   reviewForFamily,
   reviewedFamilyCount,
@@ -77,6 +78,45 @@ describe("consultant family-review flags", () => {
     assert.equal(reviewForFamily(rows, "AT").reviewed, false);
   });
 
+  it("reviewed requires a non-empty reviewer name; nameless rows uncheck and cannot mark prep", () => {
+    const nameless = FAMILY_IDS.map((family) => ({
+      family,
+      reviewed: true,
+      reviewer: "",
+      reviewedAt: "2026-09-09T12:00:00.000Z",
+      notes: "",
+    }));
+    const coerced = normalizeFamilyReviews(nameless);
+    assert.equal(coerced.every((row) => row.reviewed === false), true);
+    assert.equal(coerced.every((row) => row.reviewedAt === "2026-09-09T12:00:00.000Z"), true);
+    assert.equal(allFamiliesReviewed(nameless), false);
+    assert.equal(reviewedFamilyCount(nameless), 0);
+    assert.equal(isFamilyReviewed({ reviewed: true, reviewer: "   " }), false);
+    assert.equal(isFamilyReviewed({ reviewed: true, reviewer: "Pat" }), true);
+
+    const cleared = upsertFamilyReview(markAll(), { family: "AC", reviewer: "" });
+    assert.equal(cleared[0].reviewed, false);
+    assert.equal(cleared[0].reviewedAt, "2026-09-09T12:00:00.000Z");
+    assert.equal(allFamiliesReviewed(cleared), false);
+    assert.equal(gatedPrepMarkedAt(nameless, "2026-09-09T13:00:00.000Z"), null);
+
+    const seed = buildHarborPrecision();
+    const hit = validateAssessment({
+      assessment: { ...seed, familyReviews: nameless, prepMarkedAt: "2026-09-09T13:00:00.000Z" },
+    });
+    assert.equal(hit.ok, true);
+    assert.equal(hit.assessment.prepMarkedAt, null);
+    assert.equal(hit.assessment.familyReviews.every((row) => row.reviewed === false), true);
+    assert.equal(hit.assessment.familyReviews.every((row) => row.reviewedAt === "2026-09-09T12:00:00.000Z"), true);
+
+    const spaces = markAll("   ");
+    const spaced = validateAssessment({
+      assessment: { ...seed, familyReviews: spaces, prepMarkedAt: "2026-09-09T13:00:00.000Z" },
+    });
+    assert.equal(spaced.assessment.prepMarkedAt, null);
+    assert.equal(allFamiliesReviewed(spaced.assessment.familyReviews), false);
+  });
+
   it("upsert keeps 14 rows and clears prep when a family is unreviewed", () => {
     const thirteen = markAll();
     thirteen[0] = { ...thirteen[0], reviewed: false, reviewedAt: null };
@@ -133,7 +173,14 @@ describe("consultant family-review flags", () => {
     assert.match(reqs, /reviewer/);
     assert.match(reqs, /reviewedAt/);
     assert.match(reqs, /does not submit, affirm, or call SPRS/);
+    assert.match(reqs, /Reviewer name is required to keep this family reviewed/);
+    assert.match(reqs, /reviewed \? " ✓"/);
     assert.equal(/\/api\/sprs|\/api\/affirm|\/api\/submit/.test(reqs), false);
+
+    const css = fs.readFileSync(path.join(root, "src/index.css"), "utf8");
+    assert.match(css, /\.family-tabs button\.reviewed\s*\{/);
+    assert.match(css, /\.family-tabs button\.active\.reviewed\s*\{/);
+    assert.equal(/button\.reviewed:not\(\.active\)\s*\{[^}]*border-color/.test(css), false);
 
     assert.equal(/app\.(get|post|put)\(\s*[`'"]\/api\/sprs/.test(api), false);
     assert.equal(/app\.(get|post|put)\(\s*[`'"]\/api\/affirm/.test(api), false);
