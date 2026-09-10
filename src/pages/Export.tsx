@@ -96,8 +96,8 @@ export default function ExportPage() {
         <div className="card">
           <h2>SAMPLE zip</h2>
           <p className="helper">
-            MD + sprs-manual-entry.csv + scope.csv + poam.csv + JSON. Refused while any finding is not-reviewed. Never
-            exports Met for evidence-failed rows.
+            MD + sprs-manual-entry.csv + scope.csv + poam.csv + JSON. Refused while any catalog AO or FIPS overlay is
+            unanswered, or a requirement is still not-reviewed. Never exports Met for evidence-failed rows.
           </p>
           <div className="row">
             <button type="button" className="primary" disabled={!zipOk || busy || readOnly} onClick={() => void downloadZip()}>
@@ -106,8 +106,8 @@ export default function ExportPage() {
           </div>
           {!zipOk ? (
             <p className="helper">
-              Checklist <span className="mono">no-not-reviewed</span> is red. Finish objectives and evidence before the
-              pack will emit.
+              Finish unanswered objectives and evidence-failed MET rows before the pack will emit. Keeper Not Met (for
+              example a temporary deficiency without an operational POA) is exportable.
             </p>
           ) : null}
         </div>

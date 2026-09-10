@@ -3,7 +3,7 @@
 import catalogFile from "../data/catalog.json" with { type: "json" };
 import catalogMeta from "../data/catalog.meta.json" with { type: "json" };
 import { deductedWeight } from "./poamGuard.mjs";
-import { evidenceSupportsMet, rollupRequirement, storedFindings } from "./rollup.mjs";
+import { effectiveObjectives, evidenceSupportsMet, rollupRequirement, storedFindings } from "./rollup.mjs";
 import { scopeBlockers } from "./scope.mjs";
 import { CatalogHashMismatch, derivePartialState, scoreFromAssessment } from "./score.mjs";
 
@@ -203,17 +203,45 @@ function scoreOf(assessment, catalog, expectedHash) {
   }
 }
 
+function detsOf(assessment) {
+  return assessment?.determinations && typeof assessment.determinations === "object" ? assessment.determinations : {};
+}
+
 function findingsOf(catalog, assessment) {
   return storedFindings(
     catalog,
-    assessment?.determinations,
+    detsOf(assessment),
     asList(assessment?.evidence),
     asList(assessment?.operationalPoas),
   );
 }
 
-function hasNotReviewed(findings) {
-  return Object.values(findings).some((finding) => finding === "not-reviewed");
+function asAoFinding(value) {
+  return value === "met" || value === "not-met" || value === "na" || value === "not-reviewed" ? value : "not-reviewed";
+}
+
+/** Checklist sentence: every catalog AO (and FIPS overlay) has a finding. */
+function hasUnansweredObjectives(catalog, assessment) {
+  const dets = detsOf(assessment);
+  for (const req of catalogReqs(catalog)) {
+    const det = dets[req.reqId];
+    const objectives = effectiveObjectives(req, det);
+    if (objectives.some((ao) => asAoFinding(ao.finding) === "not-reviewed")) return true;
+    if (req?.partialCredit?.kind !== "fips") continue;
+    const overlay = det?.fipsOverlay;
+    if (!overlay || typeof overlay !== "object") return true;
+    if (asAoFinding(overlay.enc) === "not-reviewed" || asAoFinding(overlay.fips) === "not-reviewed") return true;
+  }
+  return false;
+}
+
+function hasStoredNotReviewed(catalog, assessment) {
+  return Object.values(findingsOf(catalog, assessment)).some((finding) => finding === "not-reviewed");
+}
+
+/** Unanswered AOs/overlays, or evidence-failed MET stored as not-reviewed. Keeper Not Met is exportable. */
+function blocksExportAsNotReviewed(catalog, assessment) {
+  return hasUnansweredObjectives(catalog, assessment) || hasStoredNotReviewed(catalog, assessment);
 }
 
 export function familyReviewsComplete(assessment) {
@@ -287,8 +315,8 @@ export function affirmationChecklist(assessment, scoreResult, catalog = catalogF
     item(
       "no-not-reviewed",
       "Every assessment objective has a finding.",
-      "no not-reviewed",
-      !hasNotReviewed(findings),
+      "no catalog AO or FIPS overlay is not-reviewed",
+      !hasUnansweredObjectives(catalog, assessment),
       "/requirements",
       "170.16(c)(1)",
     ),
@@ -405,11 +433,8 @@ function sprsRows(catalog, assessment) {
   for (const req of catalogReqs(catalog)) {
     const det = dets[req.reqId];
     const rolled = rollupRequirement(req, det, evidence, operationalPoas);
-    // Evidence-failed would-be MET is stored not-reviewed; never write Met for it.
+    // Evidence-failed MET is stored not-reviewed. Keeper-demoted MET is Not Met and is exportable.
     if (rolled.finding === "not-reviewed" || !EXPORTABLE.has(rolled.finding)) {
-      throw new ExportRefused("not-reviewed");
-    }
-    if (rolled.wouldBeFinding === "met" && rolled.finding !== "met") {
       throw new ExportRefused("not-reviewed");
     }
     rows.push(
@@ -570,7 +595,7 @@ function refuse(error, checklist, ready) {
 }
 
 export function canExportZip(assessment, catalog = catalogFile.requirements) {
-  return !hasNotReviewed(findingsOf(catalog, assessment));
+  return !blocksExportAsNotReviewed(catalog, assessment);
 }
 
 export function markExportReady(assessment, at = new Date().toISOString()) {
@@ -590,8 +615,7 @@ export function buildExportPack(input = {}) {
     return refuse("catalog-hash-mismatch", affirmationChecklist(assessment, null, catalog), ready);
   }
   const checklist = affirmationChecklist(assessment, score, catalog);
-  const findings = findingsOf(catalog, assessment);
-  if (hasNotReviewed(findings)) return refuse("not-reviewed", checklist, ready);
+  if (blocksExportAsNotReviewed(catalog, assessment)) return refuse("not-reviewed", checklist, ready);
 
   let sprs;
   try {

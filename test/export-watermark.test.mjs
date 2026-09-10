@@ -95,6 +95,15 @@ function csvRecords(text) {
     .filter((line) => line && !line.startsWith("#"));
 }
 
+function sprsByReq(text) {
+  const map = new Map();
+  for (const line of csvRecords(text).slice(1)) {
+    const cols = line.split(",");
+    map.set(cols[2], { family: cols[0], cmmcId: cols[1], finding: cols[4], mfa: cols[6], fips: cols[7] });
+  }
+  return map;
+}
+
 const temps = [];
 const servers = [];
 
@@ -176,9 +185,7 @@ describe("export watermark T15", () => {
     assert.equal(pack.ok, false);
     assert.equal(pack.error, "not-reviewed");
     assert.equal(pack.zip, null);
-    const row = pack.checklist.find((item) => item.id === "no-not-reviewed");
-    assert.ok(row);
-    assert.equal(row.satisfied, false);
+    assert.equal(pack.checklist.find((item) => item.id === "evidence-met")?.satisfied, false);
     assert.equal(pack.checklist.find((item) => item.id === "family-reviews")?.satisfied, false);
     const marked = markExportReady(seed);
     assert.equal(marked.ok, false);
@@ -190,8 +197,58 @@ describe("export watermark T15", () => {
     const pack = buildExportPack({ assessment: draft });
     assert.equal(pack.ok, false);
     assert.equal(pack.error, "not-reviewed");
+    assert.equal(canExportZip(draft), false);
     assert.equal(pack.checklist.find((item) => item.id === "evidence-met")?.satisfied, false);
+  });
+
+  it("T22 keeper: temporaryDeficiency without operational POA exports Not Met, not 409", () => {
+    const assessment = withMetEvidence(buildHarborPrecision());
+    assessment.determinations["3.1.3"] = {
+      ...assessment.determinations["3.1.3"],
+      temporaryDeficiency: true,
+    };
+    assessment.operationalPoas = [];
+    assert.equal(
+      storedFinding(
+        req("3.1.3"),
+        assessment.determinations["3.1.3"],
+        assessment.evidence,
+        assessment.operationalPoas,
+      ),
+      "not-met",
+    );
+    assert.equal(canExportZip(assessment), true);
+    const pack = buildExportPack({ assessment });
+    assert.equal(pack.ok, true);
+    assert.equal(sprsByReq(pack.files["sprs-manual-entry.csv"]).get("3.1.3").finding, "Not Met");
+  });
+
+  it("mixed NOT MET + unanswered AO refuses export; FIPS overlay unanswered is red", () => {
+    const mixed = withMetEvidence(buildHarborPrecision());
+    const det = mixed.determinations["3.1.1"];
+    mixed.determinations["3.1.1"] = {
+      ...det,
+      objectives: det.objectives.map((ao, i) => ({
+        ...ao,
+        finding: i === 0 ? "not-met" : i === 1 ? "not-reviewed" : ao.finding,
+      })),
+    };
+    assert.equal(storedFinding(req("3.1.1"), mixed.determinations["3.1.1"], mixed.evidence), "not-met");
+    assert.equal(canExportZip(mixed), false);
+    const pack = buildExportPack({ assessment: mixed });
+    assert.equal(pack.ok, false);
+    assert.equal(pack.error, "not-reviewed");
     assert.equal(pack.checklist.find((item) => item.id === "no-not-reviewed")?.satisfied, false);
+
+    const overlay = withMetEvidence(buildHarborPrecision());
+    overlay.determinations["3.13.11"] = {
+      ...overlay.determinations["3.13.11"],
+      fipsOverlay: { enc: "met", fips: "not-reviewed" },
+    };
+    assert.equal(canExportZip(overlay), false);
+    const overlayPack = buildExportPack({ assessment: overlay });
+    assert.equal(overlayPack.ok, false);
+    assert.equal(overlayPack.checklist.find((item) => item.id === "no-not-reviewed")?.satisfied, false);
   });
 
   it("complete SAMPLE zip: every file contains the watermark; CSV columns frozen", () => {
@@ -217,14 +274,10 @@ describe("export watermark T15", () => {
     const sprs = csvRecords(pack.files["sprs-manual-entry.csv"]);
     assert.equal(sprs[0], SPRS_CSV_COLUMNS);
     assert.equal(sprs.length, 111);
-    const byReq = new Map();
-    for (const line of sprs.slice(1)) {
-      const cols = line.split(",");
-      assert.equal(cols.length >= 8, true, line);
-      const finding = cols[4];
-      assert.equal(FINDINGS.has(finding), true, finding);
-      assert.notEqual(finding, "not-reviewed");
-      byReq.set(cols[2], { family: cols[0], cmmcId: cols[1], finding, mfa: cols[6], fips: cols[7] });
+    const byReq = sprsByReq(pack.files["sprs-manual-entry.csv"]);
+    for (const row of byReq.values()) {
+      assert.equal(FINDINGS.has(row.finding), true, row.finding);
+      assert.notEqual(row.finding, "not-reviewed");
     }
     assert.equal(byReq.get("3.12.4").cmmcId, "CA.L2-3.12.4");
     assert.equal(byReq.get("3.12.4").family, "CA");
@@ -276,7 +329,7 @@ describe("export watermark T15", () => {
     assert.equal(refused.body.error, "not-reviewed");
     assert.equal(refused.body.watermark, SAMPLE_WATERMARK);
     assert.equal(
-      refused.body.checklist.some((row) => row.id === "no-not-reviewed" && row.satisfied === false),
+      refused.body.checklist.some((row) => row.id === "evidence-met" && row.satisfied === false),
       true,
     );
 
