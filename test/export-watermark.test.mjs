@@ -175,17 +175,15 @@ afterEach(async () => {
 });
 
 describe("export watermark T15", () => {
-  it("Harbor seed (not-reviewed remains) refuses export and checklist is red", () => {
+  it("Harbor seed is zip-exportable but not Export-ready until 14 family reviews", () => {
     const seed = buildHarborPrecision();
-    assert.equal(storedFinding(req("3.1.1"), seed.determinations["3.1.1"], seed.evidence), "not-reviewed");
+    assert.equal(storedFinding(req("3.1.1"), seed.determinations["3.1.1"], seed.evidence), "met");
     assert.equal(familyReviewsComplete(seed), false);
     assert.equal(exportReady(seed), false);
-    assert.equal(canExportZip(seed), false);
+    assert.equal(canExportZip(seed), true);
     const pack = buildExportPack({ assessment: seed });
-    assert.equal(pack.ok, false);
-    assert.equal(pack.error, "not-reviewed");
-    assert.equal(pack.zip, null);
-    assert.equal(pack.checklist.find((item) => item.id === "evidence-met")?.satisfied, false);
+    assert.equal(pack.ok, true);
+    assert.equal(pack.checklist.find((item) => item.id === "evidence-met")?.satisfied, true);
     assert.equal(pack.checklist.find((item) => item.id === "family-reviews")?.satisfied, false);
     const marked = markExportReady(seed);
     assert.equal(marked.ok, false);
@@ -324,14 +322,8 @@ describe("export watermark T15", () => {
     const server = await listen(createApp({ assessmentPath: path.join(dir, "assessment.json.enc") }));
     const seedPut = await rpc(server, "PUT", "/api/assessment", { json: { assessment: buildHarborPrecision() } });
     assert.equal(seedPut.status, 200);
-    const refused = await rpc(server, "POST", "/api/export");
-    assert.equal(refused.status, 409);
-    assert.equal(refused.body.error, "not-reviewed");
-    assert.equal(refused.body.watermark, SAMPLE_WATERMARK);
-    assert.equal(
-      refused.body.checklist.some((row) => row.id === "evidence-met" && row.satisfied === false),
-      true,
-    );
+    const seeded = await rpc(server, "POST", "/api/export", { binary: true });
+    assert.equal(seeded.status, 200);
 
     const complete = withMetEvidence(buildHarborPrecision());
     const put = await rpc(server, "PUT", "/api/assessment", { json: { assessment: complete } });
