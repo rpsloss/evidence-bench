@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "standard": "NIST-SP-800-171-R2",
+  "assessmentGuide": "NIST-SP-800-171A-2018-06",
+  "retrievalDate": "2026-09-10",
+  "expectedAoCount": 320,
+  "catalogSha256": "1b1d5484d2ec931616a9e585ac69148599ebd479e9d6a8549f0facd79ebd2c43",
+  "comment": "eCFR 32 CFR 170.24 typesets IA-L2-3.5.1 with a hyphen after the family; this catalog uses IA.L2-3.5.1. expectedAoCount is PDF-pure 171A (unlettered determine-if stored as [a]). Overlay keys enc/fips are not in objectives[].",
+  "sources": [
+    {
+      "title": "NIST SP 800-171 Rev. 2 (Feb 2020, as updated 2021-01-28)",
+      "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-171r2.pdf",
+      "doi": "https://doi.org/10.6028/NIST.SP.800-171r2",
+      "role": "110 requirement statements; basic vs derived"
+    },
+    {
+      "title": "NIST SP 800-171A (June 2018) PDF — normative assessment objectives",
+      "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-171a.pdf",
+      "doi": "https://doi.org/10.6028/NIST.SP.800-171A",
+      "role": "PDF-pure determine-if statements"
+    },
+    {
+      "title": "NIST SP 800-171A assessment procedures CSV (derivative; PDF wins on drift)",
+      "url": "https://csrc.nist.gov/files/pubs/sp/800/171/a/final/docs/sp800-171a-assessment-procedures.csv",
+      "role": "machine-readable letters + typesetting fallback"
+    },
+    {
+      "title": "32 CFR 170.24 scoring values and Conditional-banned set",
+      "url": "https://www.ecfr.gov/current/title-32/section-170.24",
+      "role": "weights 5/3/1/0, partial-credit pair, banned-for-conditional"
+    }
+  ]
+}
