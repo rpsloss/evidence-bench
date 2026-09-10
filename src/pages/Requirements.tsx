@@ -9,7 +9,7 @@ import {
   type Finding,
 } from "../lib/rollup.mjs";
 import { useAssessment } from "../lib/store";
-import type { Determination } from "../types";
+import type { Determination, EvidenceItem } from "../types";
 
 const FAMILIES: { id: string; name: string }[] = [
   { id: "AC", name: "Access Control" },
@@ -234,7 +234,7 @@ export default function Requirements() {
       <p>
         Findings are per assessment objective. The requirement row is a derived roll-up — you cannot mark a
         requirement MET directly. Requirement N/A needs <span className="mono">naAllowed</span> and a justification.
-        MET without evidence stays not-reviewed until the evidence PR. SAMPLE data only.
+        MET without a non-draft, non-interview 171A pointer stays not-reviewed (32 CFR 170.24(b)(1)). SAMPLE data only.
       </p>
 
       <div className="family-tabs" role="tablist" aria-label="Requirement families">
@@ -312,6 +312,7 @@ export default function Requirements() {
           req={selected}
           det={currentDet(selected)}
           derived={derivedFinding(selected)}
+          evidence={assessment.evidence}
           naError={naError}
           readOnly={readOnly}
           onAoFinding={setAoFinding}
@@ -331,6 +332,7 @@ function RequirementDetail({
   req,
   det,
   derived,
+  evidence,
   naError,
   readOnly,
   onAoFinding,
@@ -342,6 +344,7 @@ function RequirementDetail({
   req: CatalogRequirement;
   det: Determination;
   derived: Finding;
+  evidence: EvidenceItem[];
   naError: string | null;
   readOnly: boolean;
   onAoFinding: (req: CatalogRequirement, aoId: string, finding: Finding) => void;
@@ -397,7 +400,11 @@ function RequirementDetail({
               <h3 className="mono">3.13.11[a] · derived</h3>
               <p className="muted">Determine if: {req.objectives[0]?.determineIf}</p>
               <span className={`pill ${derivedA || "not-reviewed"}`}>{findingLabel(derivedA || "not-reviewed")}</span>
-              <div className="helper">Read-only. Derived from enc / fips overlays.</div>
+              <div className="helper">
+                Read-only. Derived from enc / fips overlays. Evidence is required on [a] when derived MET, not on
+                enc/fips. Linked pointers:{" "}
+                {effectiveObjectives(req, det, evidence)[0]?.evidenceIds?.length || "none"}.
+              </div>
             </div>
           </div>
         ) : (
@@ -409,7 +416,7 @@ function RequirementDetail({
                 network non-privileged. Partial credit is derived — not a score-API enum.
               </p>
             ) : null}
-            {effectiveObjectives(req, det).map((ao) => (
+            {effectiveObjectives(req, det, evidence).map((ao) => (
               <div key={ao.aoId} className="ao-block">
                 <h3 className="mono">{ao.aoId}</h3>
                 <p className="muted">Determine if: {req.objectives.find((row) => row.aoId === ao.aoId)?.determineIf}</p>
@@ -427,6 +434,12 @@ function RequirementDetail({
                       value={ao.rationale || ""}
                       onChange={(e) => onAoRationale(req, ao.aoId, e.target.value)}
                     />
+                    <div className="helper">
+                      Linked pointers: {ao.evidenceIds?.length || "none"}
+                      {ao.finding === "met" && (ao.evidenceIds?.length ?? 0) === 0
+                        ? " — MET will stay not-reviewed until mapped."
+                        : ""}
+                    </div>
                   </div>
                 </div>
               </div>

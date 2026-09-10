@@ -154,7 +154,7 @@ export default function Scope() {
           label="Diagram URI / evidence id"
           value={scope.diagramEvidenceId ?? ""}
           onChange={(v) => patchScope({ diagramEvidenceId: v.trim() ? v : null })}
-          helper="Unclass pointer only. Evidence registry arrives in a later PR."
+          helper="Unclass pointer only. Diagram URI is a slot; register the file on Evidence."
         />
       </div>
       </fieldset>

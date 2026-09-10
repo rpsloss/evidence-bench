@@ -51,7 +51,9 @@ describe("Harbor determination seed + Requirements gates", () => {
     ]);
     assert.equal(seed.assets.find((a) => a.id === "cnc-mill")?.category, "specialized");
     assert.deepEqual(seed.flows.map((f) => f.id), ["flow-cad-mail", "flow-mail-cad"]);
-    assert.equal(seed.evidence.length, 0);
+    assert.ok(seed.evidence.length > 0);
+    assert.ok(seed.evidence.some((row) => row.id === "ev-stale-screenshot" && row.kind === "screenshot"));
+    assert.ok(seed.evidence.some((row) => row.id === "ev-unmapped-policy" && Array.isArray(row.aoIds) && row.aoIds.length === 0));
   });
 
   it("stubs all 110 requirements MET except 3.2.3 and 3.4.9 NOT MET", () => {
@@ -70,13 +72,13 @@ describe("Harbor determination seed + Requirements gates", () => {
     }
   });
 
-  it("MET stubs without evidence roll up to not-reviewed; 1-pt gaps deduct; raw 108 incomplete", () => {
+  it("MET stubs with Harbor pointers roll up to MET; 1-pt gaps deduct; raw 108 incomplete until SSP", () => {
     const seed = buildHarborPrecision();
     assert.equal(storedFinding(req("3.2.3"), seed.determinations["3.2.3"], seed.evidence), "not-met");
     assert.equal(storedFinding(req("3.4.9"), seed.determinations["3.4.9"], seed.evidence), "not-met");
-    assert.equal(storedFinding(req("3.1.1"), seed.determinations["3.1.1"], seed.evidence), "not-reviewed");
-    assert.equal(storedFinding(req("3.5.3"), seed.determinations["3.5.3"], seed.evidence), "not-reviewed");
-    assert.equal(storedFinding(req("3.13.11"), seed.determinations["3.13.11"], seed.evidence), "not-reviewed");
+    assert.equal(storedFinding(req("3.1.1"), seed.determinations["3.1.1"], seed.evidence), "met");
+    assert.equal(storedFinding(req("3.5.3"), seed.determinations["3.5.3"], seed.evidence), "met");
+    assert.equal(storedFinding(req("3.13.11"), seed.determinations["3.13.11"], seed.evidence), "met");
     const result = scoreOf(seed);
     assert.equal(result.raw, 108);
     assert.equal(result.status, "assessment-incomplete");
@@ -191,7 +193,10 @@ describe("Harbor determination seed + Requirements gates", () => {
       [...scoreIds, ...scopeIds],
     );
     assert.ok(combined.some((b) => b.id === "ssp-missing"));
-    assert.ok(combined.some((b) => b.id === "not-reviewed"));
+    assert.equal(
+      combined.some((b) => b.id === "not-reviewed"),
+      false,
+    );
     assert.ok(combined.some((b) => b.id === "missing-diagram"));
     const top = topBlockers(seed, score, 5);
     assert.ok(top.length <= 5);

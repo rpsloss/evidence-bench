@@ -61,10 +61,23 @@ export interface Determination {
   temporaryDeficiency?: boolean;
 }
 
+export type EvidenceKind =
+  | "policy"
+  | "sop"
+  | "config"
+  | "screenshot"
+  | "ticket"
+  | "training"
+  | "esp_crm"
+  | "diagram"
+  | "interview"
+  | "log_export"
+  | "physical";
+
 export interface EvidenceItem {
   id: string;
   title: string;
-  kind: string;
+  kind: EvidenceKind | string;
   uri: string;
   sha256?: string;
   capturedAt: string;
@@ -74,6 +87,24 @@ export interface EvidenceItem {
   draft: boolean;
   notes?: string;
 }
+
+export interface EvidenceGapRow {
+  aoId: AoId;
+  reqId: ReqId;
+  cmmcId: string;
+}
+
+export interface EvidenceGapBoard {
+  missing: EvidenceGapRow[];
+  unmapped: EvidenceItem[];
+  draft: EvidenceItem[];
+  stale: EvidenceItem[];
+  missingSha256: EvidenceItem[];
+  cuiRisk: EvidenceItem[];
+}
+
+export const EVIDENCE_KINDS: EvidenceKind[];
+export const FRESHNESS_DAYS: Record<string, number>;
 
 export interface OperationalPoaItem {
   id: string;
@@ -94,10 +125,25 @@ export interface RollupResult {
 }
 
 export function deriveFipsAoFinding(overlay: FipsOverlay | null | undefined): Finding;
+export function evidenceBasename(uri: string | null | undefined): string;
+export function cuiFilenameRisk(uri: string | null | undefined): boolean;
+export function isStaleEvidence(item: EvidenceItem | null | undefined, now?: number): boolean;
+export function catalogAoIdSet(catalog: CatalogRequirement[] | null | undefined): Set<string>;
+export function filter171AAoIds(
+  aoIds: unknown,
+  catalog: CatalogRequirement[] | null | undefined,
+): AoId[];
 export function effectiveObjectives(
   req: CatalogRequirement,
   determination?: Determination | null,
+  evidence?: EvidenceItem[] | null,
 ): ObjectiveDetermination[];
+export function evidenceGapBoard(
+  catalog: CatalogRequirement[] | null | undefined,
+  determinations: Record<string, Determination> | null | undefined,
+  evidence?: EvidenceItem[] | null,
+  now?: number,
+): EvidenceGapBoard;
 export function rollupWouldBeFinding(
   req: CatalogRequirement,
   objectives: ObjectiveDetermination[],

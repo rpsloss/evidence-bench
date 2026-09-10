@@ -1,15 +1,17 @@
-/** Fictional Harbor Precision org/scope/assets/flows + determination stubs. */
+/** Fictional Harbor Precision org/scope/assets/flows + determination + evidence layers. */
 
 import catalogFile from "./catalog.json" with { type: "json" };
 import catalogMeta from "./catalog.meta.json" with { type: "json" };
 
 const NOT_MET_SEED = new Set(["3.2.3", "3.4.9"]);
+const EVIDENCE_CAPTURED = "2026-08-01T00:00:00Z";
+const EVIDENCE_OWNER = "Jordan Hale (fictional)";
 
 function aoFinding(ao, finding) {
   const gap =
     finding === "not-met"
       ? "Harbor seed gap (sample). 1-point NOT MET stub."
-      : "Harbor MET stub (sample). Evidence arrives in a later PR.";
+      : "Harbor MET stub (sample). Unclassified URI pointer in the evidence registry.";
   return {
     aoId: ao.aoId,
     finding,
@@ -18,6 +20,65 @@ function aoFinding(ao, finding) {
     assessedAt: null,
     assessedBy: null,
   };
+}
+
+/** Browser-safe 64-hex filler. Pointer metadata only — not a hash of CUI bytes. */
+function sampleSha256(label) {
+  let h = 2166136261;
+  const s = `unclass-sample:${label}`;
+  let out = "";
+  for (let i = 0; i < 64; i += 1) {
+    h ^= s.charCodeAt(i % s.length);
+    h = Math.imul(h, 16777619) >>> 0;
+    out += (h & 0xf).toString(16);
+  }
+  return out;
+}
+
+function harborEvidence() {
+  const items = [];
+  for (const req of catalogFile.requirements) {
+    if (!req?.reqId || NOT_MET_SEED.has(req.reqId)) continue;
+    const aoIds = (req.objectives || []).map((ao) => ao.aoId).filter(Boolean);
+    const uri = `file:///unclass/sample/harbor/${String(req.family).toLowerCase()}-${req.reqId}-policy.pdf`;
+    items.push({
+      id: `ev-met-${req.reqId}`,
+      title: `${req.cmmcId} policy (sample unclassified pointer)`,
+      kind: "policy",
+      uri,
+      sha256: sampleSha256(uri),
+      capturedAt: EVIDENCE_CAPTURED,
+      aoIds,
+      owner: EVIDENCE_OWNER,
+      draft: false,
+      notes: "Harbor MET pointer. SAMPLE. Not CUI. Bytes are not stored in this app.",
+    });
+  }
+  items.push({
+    id: "ev-stale-screenshot",
+    title: "Stale IdP login screenshot (sample unclassified pointer)",
+    kind: "screenshot",
+    uri: "file:///unclass/sample/harbor/idp-login-stale-screenshot.png",
+    sha256: sampleSha256("stale-screenshot"),
+    capturedAt: "2025-01-15T00:00:00Z",
+    expiresAt: "2025-04-15T00:00:00Z",
+    aoIds: ["3.5.3[b]"],
+    owner: EVIDENCE_OWNER,
+    draft: false,
+    notes: "Stale on purpose for the gap board. SAMPLE. Not CUI.",
+  });
+  items.push({
+    id: "ev-unmapped-policy",
+    title: "Unmapped acceptable-use policy (sample unclassified pointer)",
+    kind: "policy",
+    uri: "file:///unclass/sample/harbor/acceptable-use-unmapped.pdf",
+    capturedAt: EVIDENCE_CAPTURED,
+    aoIds: [],
+    owner: EVIDENCE_OWNER,
+    draft: false,
+    notes: "Unmapped on purpose — empty aoIds never credit MET. SAMPLE. Not CUI.",
+  });
+  return items;
 }
 
 function stubDetermination(req) {
@@ -161,7 +222,7 @@ export function buildHarborPrecision() {
       },
     ],
     determinations: harborDeterminations(),
-    evidence: [],
+    evidence: harborEvidence(),
     poams: [
       harborPoam(
         "3.2.3",

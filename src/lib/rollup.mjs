@@ -37,11 +37,104 @@ export function deriveFipsAoFinding(overlay) {
   return "met";
 }
 
+export const EVIDENCE_KINDS = [
+  "policy",
+  "sop",
+  "config",
+  "screenshot",
+  "ticket",
+  "training",
+  "esp_crm",
+  "diagram",
+  "interview",
+  "log_export",
+  "physical",
+];
+
+/** Family default freshness. Stale is a gap-board warning, not a MET breaker. */
+export const FRESHNESS_DAYS = {
+  policy: 365,
+  sop: 365,
+  config: 90,
+  screenshot: 90,
+  ticket: 90,
+  training: 365,
+  esp_crm: 365,
+  diagram: 365,
+  interview: 365,
+  log_export: 90,
+  physical: 365,
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const CUI_NAME_RE = /cui|fouo|itar/i;
+
+export function evidenceBasename(uri) {
+  const s = str(uri).trim();
+  const parts = s.split(/[/\\]/);
+  return parts[parts.length - 1] || s;
+}
+
+/** Filename deny-list is a warning, not a detector and not a 400. */
+export function cuiFilenameRisk(uri) {
+  return CUI_NAME_RE.test(evidenceBasename(uri));
+}
+
+export function isStaleEvidence(item, now = Date.now()) {
+  if (!item || typeof item !== "object") return false;
+  const expires = Date.parse(str(item.expiresAt));
+  if (Number.isFinite(expires) && expires < now) return true;
+  const captured = Date.parse(str(item.capturedAt));
+  if (!Number.isFinite(captured)) return true;
+  const days = FRESHNESS_DAYS[str(item.kind)] ?? 90;
+  return now - captured > days * DAY_MS;
+}
+
+export function catalogAoIdSet(catalog) {
+  const set = new Set();
+  for (const req of asList(catalog)) {
+    for (const ao of asList(req?.objectives)) {
+      const id = str(ao?.aoId);
+      if (id) set.add(id);
+    }
+  }
+  return set;
+}
+
+/** Overlay keys (enc/fips) are not 171A AOs and never attach. */
+export function filter171AAoIds(aoIds, catalog) {
+  const allowed = catalogAoIdSet(catalog);
+  const out = [];
+  const seen = new Set();
+  for (const raw of asList(aoIds)) {
+    const id = str(raw);
+    if (!id || !allowed.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
+function linkedEvidenceIds(aoId, evidence) {
+  const id = str(aoId);
+  if (!id) return [];
+  const out = [];
+  for (const item of asList(evidence)) {
+    if (!item || typeof item !== "object") continue;
+    const itemId = str(item.id);
+    if (!itemId) continue;
+    const aoIds = asList(item.aoIds).map(str).filter(Boolean);
+    if (aoIds.includes(id)) out.push(itemId);
+  }
+  return out;
+}
+
 /**
  * @param {object} req
  * @param {object | null | undefined} determination
+ * @param {object[] | null | undefined} evidence
  */
-export function effectiveObjectives(req, determination) {
+export function effectiveObjectives(req, determination, evidence) {
   const provided = asList(determination?.objectives);
   const byId = new Map();
   for (const row of provided) {
@@ -60,7 +153,8 @@ export function effectiveObjectives(req, determination) {
       letter: letterOf(ao) || letterOf(prev),
       finding,
       rationale: str(prev?.rationale),
-      evidenceIds: asList(prev?.evidenceIds).map(str).filter(Boolean),
+      // aoIds on EvidenceItem is authoritative; evidenceIds is derived on read.
+      evidenceIds: linkedEvidenceIds(aoId, evidence),
       assessedAt: prev?.assessedAt ?? null,
       assessedBy: prev?.assessedBy ?? null,
     };
@@ -116,6 +210,39 @@ export function evidenceSupportsMet(objectives, evidence) {
     if (!items.some((item) => str(item.kind) !== "interview")) return false;
   }
   return true;
+}
+
+/**
+ * Gap board: missing / stale / unmapped / draft / missing sha256.
+ * Missing is a MET breaker. Stale is a warning unless every linked item is also draft.
+ */
+export function evidenceGapBoard(catalog, determinations, evidence, now = Date.now()) {
+  const items = asList(evidence);
+  const dets = determinations && typeof determinations === "object" ? determinations : {};
+  const missing = [];
+  for (const req of asList(catalog)) {
+    if (!req || typeof req !== "object") continue;
+    const objectives = effectiveObjectives(req, dets[str(req.reqId)], items);
+    for (const ao of objectives) {
+      if (asFinding(ao.finding) !== "met") continue;
+      if (mappedEvidence(ao.aoId, items).length > 0) continue;
+      missing.push({ aoId: ao.aoId, reqId: str(req.reqId), cmmcId: str(req.cmmcId) });
+    }
+  }
+  const unmapped = [];
+  const draft = [];
+  const stale = [];
+  const missingSha256 = [];
+  const cuiRisk = [];
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    if (asList(item.aoIds).map(str).filter(Boolean).length === 0) unmapped.push(item);
+    if (item.draft === true) draft.push(item);
+    if (isStaleEvidence(item, now)) stale.push(item);
+    if (!str(item.sha256).trim()) missingSha256.push(item);
+    if (cuiFilenameRisk(item.uri)) cuiRisk.push(item);
+  }
+  return { missing, unmapped, draft, stale, missingSha256, cuiRisk };
 }
 
 function hasOperationalPoa(reqId, operationalPoas) {
@@ -180,7 +307,7 @@ function applyMetGates(req, determination, wouldBe, objectives, evidence, operat
  * @param {object[] | null | undefined} operationalPoas
  */
 export function rollupRequirement(req, determination, evidence, operationalPoas) {
-  const objectives = effectiveObjectives(req, determination);
+  const objectives = effectiveObjectives(req, determination, evidence);
   const wouldBeFinding = rollupWouldBeFinding(req, objectives);
   const finding = applyMetGates(req, determination, wouldBeFinding, objectives, evidence, operationalPoas);
   return { reqId: str(req?.reqId), finding, wouldBeFinding, objectives };

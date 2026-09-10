@@ -75,10 +75,23 @@ export interface Determination {
   temporaryDeficiency: boolean;
 }
 
+export type EvidenceKind =
+  | "policy"
+  | "sop"
+  | "config"
+  | "screenshot"
+  | "ticket"
+  | "training"
+  | "esp_crm"
+  | "diagram"
+  | "interview"
+  | "log_export"
+  | "physical";
+
 export interface EvidenceItem {
   id: string;
   title: string;
-  kind: string;
+  kind: EvidenceKind;
   uri: string;
   sha256?: string;
   capturedAt: string;

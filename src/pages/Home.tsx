@@ -74,7 +74,7 @@ export default function Home() {
 
       <h2>Top blockers</h2>
       <p>
-        Score chips plus scope-graph chips. MET stubs without evidence stay not-reviewed until the evidence PR.
+        Score chips plus scope-graph chips. MET needs a non-draft, non-interview URI pointer per 171A objective.
         {all.length > chips.length ? ` Showing 5 of ${all.length}.` : ""}
       </p>
       <div className="list">
