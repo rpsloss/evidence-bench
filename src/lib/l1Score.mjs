@@ -156,6 +156,6 @@ export function nextL1Action(assessment, catalog = l1CatalogFile.requirements) {
     href: "/export",
     title: "Level 1 SPRS pack next",
     detail:
-      "All 15 FAR 52.204-21 requirements are answered. The Level 1 typing sheet (compliance result, CAGE, status date) is the next slice.",
+      "All 15 FAR 52.204-21 requirements are answered. Type the Level 1 SPRS sheet by hand — compliance result, CAGE(s), assessment scope, status date.",
   };
 }

@@ -16,11 +16,230 @@ import {
   familyProgressRows,
   familyWorkCaption,
 } from "../lib/familyProgress.mjs";
+import { isWorkingLevel1, normalizeEngagement } from "../lib/engagement.mjs";
+import {
+  canExportL1Zip,
+  l1AffirmationChecklist,
+  l1ExportReady,
+  l1FindingPreviewRows,
+  l1SprsPreview,
+  markL1ExportReady,
+} from "../lib/l1Export.mjs";
+import { l1FamilyProgress } from "../lib/l1Score.mjs";
 import { reportAssessmentAccess, useAssessment } from "../lib/store";
 import WorkingLevelNote from "../components/WorkingLevelNote";
 
+function L1ExportPanel({
+  busy,
+  readOnly,
+  onDownloadZip,
+  onDownloadSnapshot,
+  onMarkPrep,
+}: {
+  busy: boolean;
+  readOnly: boolean;
+  onDownloadZip: () => void;
+  onDownloadSnapshot: () => void;
+  onMarkPrep: () => void;
+}) {
+  const { assessment, l1Score } = useAssessment();
+  const preview = useMemo(() => l1SprsPreview(assessment), [assessment]);
+  const findings = useMemo(() => l1FindingPreviewRows(assessment), [assessment]);
+  const checklist = useMemo(() => l1AffirmationChecklist(assessment), [assessment]);
+  const families = useMemo(() => l1FamilyProgress(assessment), [assessment]);
+  const zipOk = canExportL1Zip(assessment);
+  const ready = l1ExportReady(assessment);
+  const prep = assessment.prepMarkedAt;
+
+  return (
+    <>
+      <div className="grid two" style={{ marginBottom: 16 }}>
+        <div className="card">
+          <h2>Level 1 SAMPLE zip</h2>
+          <p className="helper">
+            Five SPRS fields in l1-sprs-entry.csv plus the 17 mapped FAR findings. No POA&M. No 110-row CSV. Refused
+            while any Level 1 objective is unanswered. NOT MET still exports as NOT MET.
+          </p>
+          <div className="row">
+            <button type="button" className="primary" disabled={!zipOk || busy || readOnly} onClick={onDownloadZip}>
+              {busy ? "Building…" : "Download Level 1 SAMPLE zip"}
+            </button>
+          </div>
+          {!zipOk ? (
+            <p className="helper">
+              {l1Score.unanswered} unanswered Level 1 row(s). Finish them before the typing sheet will emit.
+            </p>
+          ) : null}
+          <p className="helper">
+            Assembler snapshot is allowed mid-cycle. It omits l1-sprs-entry.csv. {l1Score.met}/{l1Score.total} FAR rows
+            MET.
+          </p>
+          <div className="row">
+            <button type="button" disabled={busy || readOnly} onClick={onDownloadSnapshot}>
+              {busy ? "Building…" : "Download Level 1 snapshot"}
+            </button>
+          </div>
+        </div>
+        <div className="card">
+          <h2>Export-ready (local prep)</h2>
+          <p className="helper">
+            Requires confirmed intake and no unanswered Level 1 objectives. prepMarkedAt is not a CMMC Status Date.
+            The official affirms in SPRS, not here.
+          </p>
+          <p className="mono">{prep || "(not marked)"}</p>
+          <button type="button" disabled={!ready || readOnly} onClick={onMarkPrep}>
+            Mark Level 1 pack ready
+          </button>
+          {!ready ? (
+            <p className="helper">Confirm intake and answer every mapped Level 1 objective first.</p>
+          ) : null}
+        </div>
+      </div>
+
+      <h2>Level 1 families</h2>
+      <p className="helper">Work status for the six FAR families. Gapped means NOT MET. No POA&M path.</p>
+      <div className="card" style={{ marginBottom: 16 }}>
+        <table>
+          <thead>
+            <tr>
+              <th>Family</th>
+              <th>Work status</th>
+              <th>MET</th>
+              <th>Unanswered</th>
+              <th>NOT MET</th>
+            </tr>
+          </thead>
+          <tbody>
+            {families.map((row) => (
+              <tr key={row.family}>
+                <td className="mono">
+                  <Link to={`/requirements?family=${row.family}`}>{row.family}</Link>
+                </td>
+                <td>
+                  <span
+                    className={`pill ${row.completion === "present" ? "ok" : row.completion === "partial" ? "info" : row.completion === "gapped" ? "warning" : "blocker"}`}
+                  >
+                    {completionLabel(row.completion)}
+                  </span>
+                </td>
+                <td>{row.met}</td>
+                <td>{row.unanswered}</td>
+                <td>{row.notMet}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>What to type into SPRS</h2>
+      <p className="helper">
+        {CHECKLIST_PREFIX} These are the 32 CFR 170.15(a)(1)(i) inputs. CMMC Status Date stays blank — type it in SPRS.
+        Compliance result is MET or NOT MET. No 110 findings. No POA&M.
+      </p>
+      <div className="card" style={{ marginBottom: 16 }}>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Value to type</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>CMMC Level</td>
+              <td className="mono">{preview.cmmcLevel}</td>
+            </tr>
+            <tr>
+              <td>CMMC Status Date</td>
+              <td>(type in SPRS — not prepMarkedAt)</td>
+            </tr>
+            <tr>
+              <td>CMMC Assessment Scope</td>
+              <td>{preview.assessmentScope}</td>
+            </tr>
+            <tr>
+              <td>CAGE code(s)</td>
+              <td className="mono">{preview.cages || "—"}</td>
+            </tr>
+            <tr className={preview.complianceResult === "MET" ? undefined : "unsatisfied"}>
+              <td>Compliance result</td>
+              <td className="mono">{preview.complianceResult}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>FAR findings (QC, not SPRS fields)</h2>
+      <p className="helper">
+        17 mapped 171 rows behind the 15 FAR requirements. Type the five fields above, not these rows.
+      </p>
+      <div className="card table-scroll" style={{ marginBottom: 16 }}>
+        <table>
+          <thead>
+            <tr>
+              <th>CMMC ID</th>
+              <th>FAR</th>
+              <th>NIST 800-171 ID</th>
+              <th>Title</th>
+              <th>Finding</th>
+            </tr>
+          </thead>
+          <tbody>
+            {findings.map((row) => (
+              <tr key={row.reqId} className={row.exportable ? undefined : "unsatisfied"}>
+                <td className="mono">{row.cmmcId}</td>
+                <td className="mono">{row.farParagraph}</td>
+                <td className="mono">{row.reqId}</td>
+                <td>{row.title}</td>
+                <td>{row.finding}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Affirming-official checklist</h2>
+      <p className="helper">
+        {CHECKLIST_PREFIX} Read-only projection of this Level 1 pack. Red rows are not yet true. No signature capture.
+      </p>
+      <div className="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Check</th>
+              <th>What must be true</th>
+              <th>Ready?</th>
+              <th>Go to</th>
+            </tr>
+          </thead>
+          <tbody>
+            {checklist.map((row) => (
+              <tr key={row.id} className={row.satisfied ? undefined : "unsatisfied"}>
+                <td className="mono">{row.id}</td>
+                <td>
+                  {row.statement}
+                  {row.citation ? <div className="muted">{row.citation}</div> : null}
+                </td>
+                <td>
+                  <span className={`pill ${row.satisfied ? "ok" : "blocker"}`}>
+                    {row.satisfied ? "yes" : "no"}
+                  </span>
+                </td>
+                <td>
+                  <Link to={row.href}>{row.href}</Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 export default function ExportPage() {
   const { assessment, score, setAssessment, readOnly } = useAssessment();
+  const workingL1 = isWorkingLevel1(normalizeEngagement(assessment.engagement));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const checklist = useMemo(() => affirmationChecklist(assessment, score), [assessment, score]);
@@ -89,12 +308,36 @@ export default function ExportPage() {
   }
 
   async function downloadZip() {
+    if (workingL1) {
+      if (!canExportL1Zip(assessment)) return;
+      await downloadNamedZip("/api/export", "evidence-bench-l1-sample.zip", "export");
+      return;
+    }
     if (!zipOk) return;
     await downloadNamedZip("/api/export", "evidence-bench-sample.zip", "export");
   }
 
   async function downloadSnapshot() {
-    await downloadNamedZip("/api/snapshot", "evidence-bench-assembler-snapshot.zip", "snapshot");
+    await downloadNamedZip(
+      "/api/snapshot",
+      workingL1 ? "evidence-bench-l1-snapshot.zip" : "evidence-bench-assembler-snapshot.zip",
+      "snapshot",
+    );
+  }
+
+  function markL1Prep() {
+    if (readOnly) return;
+    const next = markL1ExportReady(assessment);
+    if (!next.ok) {
+      setError(
+        next.error === "intake"
+          ? "Level 1 export-ready requires confirmed intake."
+          : "Level 1 export-ready requires every mapped objective to be answered.",
+      );
+      return;
+    }
+    setError(null);
+    setAssessment(() => next.assessment);
   }
 
   return (
@@ -122,6 +365,16 @@ export default function ExportPage() {
         </div>
       ) : null}
 
+      {workingL1 ? (
+        <L1ExportPanel
+          busy={busy}
+          readOnly={readOnly}
+          onDownloadZip={() => void downloadZip()}
+          onDownloadSnapshot={() => void downloadSnapshot()}
+          onMarkPrep={markL1Prep}
+        />
+      ) : (
+      <>
       <div className="grid two" style={{ marginBottom: 16 }}>
         <div className="card">
           <h2>SAMPLE zip</h2>
@@ -297,6 +550,8 @@ export default function ExportPage() {
           </tbody>
         </table>
       </div>
+      </>
+      )}
     </div>
   );
 }
