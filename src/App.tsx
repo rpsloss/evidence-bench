@@ -1,4 +1,5 @@
 import { NavLink, Route, Routes } from "react-router-dom";
+import { BrandMark } from "./components/BrandMark";
 import { levelLabel, normalizeEngagement } from "./lib/engagement.mjs";
 import { useAssessment } from "./lib/store";
 import type { CmmcStatus } from "./types";
@@ -55,8 +56,14 @@ export default function App() {
     <div className="shell">
       <aside className="nav">
         <div className="brand">
-          <strong>Evidence Bench</strong>
-          <span>{levelLabel(engagement.workingLevel)} prep</span>
+          <div className="brand-lockup">
+            <BrandMark />
+            <div>
+              <span className="brand-org">Castleridge</span>
+              <strong>Evidence Bench</strong>
+              <span>{levelLabel(engagement.workingLevel)} prep</span>
+            </div>
+          </div>
         </div>
         {links.map(([to, label]) => (
           <NavLink

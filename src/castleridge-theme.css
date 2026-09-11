@@ -1,0 +1,50 @@
+/* Castleridge product density — colors/type from the marketing site.
+   No grain, no photography, no 100vh chapters.
+   Copy this file into app repos; keep values in sync with styles.css :root. */
+
+:root {
+  --bg: #070708;
+  --bg-2: #0d0d0f;
+  --bg-3: #141416;
+  --bg-elev: #0d0d0f;
+  --bg-elev-2: #141416;
+  --text: #f2efe8;
+  --muted: #9c9890;
+  --faint: #6a6660;
+  --line: rgba(242, 239, 232, 0.1);
+  --line-strong: rgba(242, 239, 232, 0.22);
+  --accent: #d7c4a3;
+  --gold: #d7c4a3;
+  --gold-dim: rgba(215, 196, 163, 0.42);
+  --green: #8aa37a;
+  --red: #c48a80;
+  --amber: #c4a56a;
+  --blue: #8aa0ad;
+  --shadow: none;
+  --radius: 2px;
+  --font-sans: "Instrument Sans", system-ui, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, serif;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+.brand-mark {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 0.28rem;
+  color: var(--text);
+}
+.brand-org,
+.brand .brand-org {
+  display: block;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 0.15rem;
+}
