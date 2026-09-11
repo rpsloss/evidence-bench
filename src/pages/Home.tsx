@@ -29,6 +29,12 @@ import {
   promoteErrorMessage,
   promoteToL2,
 } from "../lib/l1Promote.mjs";
+import {
+  clearPlaybookStamp,
+  consultantPlaybook,
+  stampL1Typed,
+  stampL2Affirmed,
+} from "../lib/playbook.mjs";
 import { useAssessment } from "../lib/store";
 import type { CmmcStatus } from "../types";
 
@@ -68,6 +74,7 @@ export default function Home() {
   const workingL1 = isWorkingLevel1(engagement);
   const cages = uniqueCages(org, engagement);
   const promo = canPromoteToL2(assessment);
+  const playbook = consultantPlaybook(assessment, score);
 
   function markPrep() {
     setAssessment((a) => {
@@ -100,8 +107,8 @@ export default function Home() {
         entry.
       </p>
       <div className="row">
-        <Link className="btn primary" to={next.href}>
-          {next.title}
+        <Link className="btn primary" to={playbook.next?.href || next.href}>
+          {playbook.next?.title || next.title}
         </Link>
         <Link className="btn" to="/intake">
           Intake
@@ -176,6 +183,103 @@ export default function Home() {
               <strong>Promoted from Level 1.</strong> {engagement.l1CreditedReqIds.length} mapped practices credited.
               Punch list below is the L2 delta, not a blank 110.
             </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h2>Consultant playbook</h2>
+        <p>
+          Your work items for this engagement. Not a GRC dashboard and not a SPRS finding. {playbook.doneCount} done ·{" "}
+          {playbook.open.length} open. The app never submits, signs, or affirms.
+        </p>
+        {playbook.next ? (
+          <div className="banner" style={{ marginBottom: 12 }}>
+            <div>
+              <strong>Next: {playbook.next.title}.</strong> {playbook.next.detail}
+              {playbook.next.citation ? <div className="muted">{playbook.next.citation}</div> : null}
+            </div>
+          </div>
+        ) : null}
+        {playbook.sprsBlockers.length > 0 ? (
+          <div className="banner conflict" style={{ marginBottom: 12 }}>
+            <div>
+              <strong>Blocked for SPRS.</strong>
+              <ul style={{ margin: "0.4rem 0 0", paddingLeft: "1.1rem" }}>
+                {playbook.sprsBlockers.map((row) => (
+                  <li key={row.id}>
+                    {row.reason} <Link to={row.href}>Go</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : (
+          <p className="helper">No SPRS typing blockers on the current working level.</p>
+        )}
+        <div className="list" style={{ marginBottom: 12 }}>
+          {playbook.open.length === 0 ? (
+            <div className="card">Playbook is clear. Type into SPRS by hand if a pack is ready. Do not affirm here.</div>
+          ) : (
+            playbook.open.map((row) => (
+              <Link key={row.id} className="blocker-item" to={row.href}>
+                <span className={`pill ${row.severity}`}>{row.status}</span>
+                <h3>{row.title}</h3>
+                <div className="muted">{row.detail}</div>
+              </Link>
+            ))
+          )}
+        </div>
+        {playbook.clocks.length > 0 ? (
+          <div className="grid two">
+            {playbook.clocks.map((clock) => (
+              <div key={clock.id} className="card">
+                <h3>{clock.label}</h3>
+                <p className="helper">{clock.hint}</p>
+                <p>
+                  <span
+                    className={`pill ${clock.state === "ok" ? "ok" : clock.state === "soon" ? "warning" : clock.state === "overdue" ? "blocker" : "info"}`}
+                  >
+                    {clock.state}
+                  </span>{" "}
+                  {clock.stampedAt ? when(clock.stampedAt) : "not stamped"}
+                  {clock.dueAt ? ` · due ${when(clock.dueAt)}` : ""}
+                  {clock.daysLeft != null ? ` · ${clock.daysLeft}d` : ""}
+                </p>
+                <div className="row" style={{ marginBottom: 0 }}>
+                  <button
+                    type="button"
+                    disabled={readOnly}
+                    onClick={() =>
+                      setAssessment((a) => ({
+                        ...a,
+                        engagement:
+                          clock.id === "l1-annual"
+                            ? stampL1Typed(a.engagement)
+                            : stampL2Affirmed(a.engagement),
+                      }))
+                    }
+                  >
+                    {clock.id === "l1-annual" ? "Stamp: typed L1 in SPRS" : "Stamp: AO affirmed in SPRS"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={readOnly || !clock.stampedAt}
+                    onClick={() =>
+                      setAssessment((a) => ({
+                        ...a,
+                        engagement: clearPlaybookStamp(
+                          a.engagement,
+                          clock.id === "l1-annual" ? "l1TypedAt" : "l2AffirmedAt",
+                        ),
+                      }))
+                    }
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         ) : null}
       </div>

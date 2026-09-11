@@ -32,6 +32,8 @@ export function emptyEngagement() {
     intakeNotedAt: null,
     promotedFromL1At: null,
     l1CreditedReqIds: [],
+    l1TypedAt: null,
+    l2AffirmedAt: null,
   };
 }
 
@@ -139,6 +141,8 @@ export function normalizeEngagement(raw) {
     intakeNotedAt,
     promotedFromL1At: str(src.promotedFromL1At).trim() || null,
     l1CreditedReqIds: credited,
+    l1TypedAt: str(src.l1TypedAt).trim() || null,
+    l2AffirmedAt: str(src.l2AffirmedAt).trim() || null,
   };
 }
 

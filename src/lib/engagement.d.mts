@@ -28,6 +28,8 @@ export interface Engagement {
   intakeNotedAt: string | null;
   promotedFromL1At: string | null;
   l1CreditedReqIds: string[];
+  l1TypedAt: string | null;
+  l2AffirmedAt: string | null;
 }
 
 export interface EngagementNextAction {
