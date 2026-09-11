@@ -58,6 +58,76 @@ export function familyProgressBoard(
   catalog?: CatalogRequirement[],
 ): FamilyProgressBoard;
 
+export interface PunchListAoItem {
+  family: string;
+  reqId: string;
+  cmmcId: string;
+  aoId: string;
+  href: string;
+}
+
+export interface PunchListPoamItem {
+  family: string;
+  reqId: string;
+  cmmcId: string;
+  href: string;
+}
+
+export interface PunchListReviewItem {
+  family: string;
+  name: string;
+  href: string;
+}
+
+export interface PunchListEvidenceWarning {
+  kind: "stale" | "draft" | "unmapped";
+  id: string;
+  title: string;
+  evidenceKind: string;
+  href: string;
+}
+
+export interface PunchListCounts {
+  unansweredAos: number;
+  missingPointers: number;
+  missingPoams: number;
+  openReviews: number;
+  stale: number;
+  draft: number;
+  unmapped: number;
+  work: number;
+  warnings: number;
+}
+
+export interface AssemblerPunchList {
+  unansweredAos: PunchListAoItem[];
+  missingPointers: PunchListAoItem[];
+  missingPoams: PunchListPoamItem[];
+  openReviews: PunchListReviewItem[];
+  stale: PunchListEvidenceWarning[];
+  draft: PunchListEvidenceWarning[];
+  unmapped: PunchListEvidenceWarning[];
+  counts: PunchListCounts;
+}
+
+export interface PunchListHomeItem {
+  id: string;
+  kind: string;
+  severity: "blocker" | "warning" | "info";
+  family: string | null;
+  href: string;
+  title: string;
+  detail: string;
+}
+
+export function assemblerPunchList(
+  assessment: Assessment | null | undefined | unknown,
+  catalog?: CatalogRequirement[],
+  now?: number,
+): AssemblerPunchList;
+
+export function punchListHomeItems(list: AssemblerPunchList | null | undefined): PunchListHomeItem[];
+
 export function handoffMarkdown(
   assessment: Assessment | null | undefined | unknown,
   score: AssessmentScore | null | undefined,

@@ -9,10 +9,12 @@ import { createApp } from "../server/index.mjs";
 import { buildHarborPrecision } from "../src/data/harbor-precision.mjs";
 import {
   COMPLETIONS,
+  assemblerPunchList,
   completionLabel,
   familyProgressBoard,
   familyProgressRows,
   handoffMarkdown,
+  punchListHomeItems,
 } from "../src/lib/familyProgress.mjs";
 import { buildAssemblerSnapshot } from "../src/lib/exportPack.mjs";
 
@@ -242,6 +244,8 @@ describe("assembler family progress", () => {
     assert.match(pack.files["COLUMNS.md"], /CMMC practice ID/);
     assert.match(pack.files["HANDOFF.md"], /Start AC/);
     assert.match(pack.files["HANDOFF.md"], /Work status/);
+    assert.match(pack.files["HANDOFF.md"], /Punch list \(AO\/SCA QC\)/);
+    assert.match(pack.files["HANDOFF.md"], /- AC:/);
     assert.match(pack.files["HANDOFF.md"], /UNCLASSIFIED \/\/ SAMPLE \/\/ NOT A SPRS SUBMISSION/);
     assert.match(pack.files["README.md"], /not a SPRS submission/i);
     const members = unzipStore(pack.zip);
@@ -274,5 +278,73 @@ describe("assembler family progress", () => {
     assert.equal(res2.status, 200);
     const handoff = unzipStore(res2.buf).find((row) => row.name === "HANDOFF.md");
     assert.match(handoff.body, /Start IR/);
+    assert.match(handoff.body, /Punch list \(AO\/SCA QC\)/);
+    assert.match(handoff.body, /### Unanswered objectives/);
+    assert.match(handoff.body, /- IR:/);
+  });
+});
+
+describe("assembler punch list", () => {
+  it("Harbor seed has no family work items, 14 open reviews, one stale and one unmapped warning", () => {
+    const seed = buildHarborPrecision();
+    const punch = assemblerPunchList(seed);
+    assert.equal(punch.counts.unansweredAos, 0);
+    assert.equal(punch.counts.missingPointers, 0);
+    assert.equal(punch.counts.missingPoams, 0);
+    assert.equal(punch.counts.work, 0);
+    assert.equal(punch.counts.openReviews, 14);
+    assert.equal(punch.counts.stale, 1);
+    assert.equal(punch.counts.unmapped, 1);
+    assert.equal(punch.counts.draft, 0);
+    assert.equal(punch.stale[0].id, "ev-stale-screenshot");
+    assert.equal(punch.unmapped[0].id, "ev-unmapped-policy");
+    const home = punchListHomeItems(punch);
+    assert.equal(
+      home.some((row) => row.kind === "unanswered" || row.kind === "missing-pointer" || row.kind === "missing-poam"),
+      false,
+    );
+    assert.equal(home.some((row) => row.id === "stale-ev-stale-screenshot"), true);
+    assert.equal(home.some((row) => row.id === "unmapped-ev-unmapped-policy"), true);
+    assert.equal(
+      home.some((row) => row.kind === "stale" && /MET breaker/i.test(row.detail)),
+      true,
+    );
+  });
+
+  it("wiped family lists unanswered AOs; stripped MET pointers and dropped POA&M become work items", () => {
+    const seed = buildHarborPrecision();
+    const unanswered = assemblerPunchList(wipeFamily(seed, "AC"));
+    assert.ok(unanswered.counts.unansweredAos > 0);
+    assert.equal(
+      unanswered.unansweredAos.every((row) => row.family === "AC" && row.href === "/requirements?family=AC"),
+      true,
+    );
+    assert.match(unanswered.unansweredAos[0].aoId, /^3\./);
+
+    const pointers = assemblerPunchList(stripFamilyEvidence(seed, "AC"));
+    assert.ok(pointers.counts.missingPointers > 0);
+    assert.equal(pointers.missingPointers.every((row) => row.family === "AC" && row.href === "/evidence"), true);
+
+    const poams = assemblerPunchList({ ...seed, poams: [] });
+    assert.equal(poams.counts.missingPoams, 2);
+    assert.equal(poams.missingPoams.every((row) => row.href === "/poam"), true);
+    const home = punchListHomeItems(poams);
+    assert.equal(home.some((row) => row.kind === "missing-poam" && row.family === "AT"), true);
+    assert.equal(home.some((row) => row.kind === "missing-poam" && row.family === "CM"), true);
+  });
+
+  it("HANDOFF.md punch list names unanswered AOs and does not treat stale as a SPRS finding", () => {
+    const seed = wipeFamily(buildHarborPrecision(), "PS");
+    const md = handoffMarkdown(seed, { raw: 108, status: "conditional-l2-self" });
+    assert.match(md, /Punch list: \d+ work items · 14 reviews open · 2 evidence warnings/);
+    assert.match(md, /## Punch list \(AO\/SCA QC\)/);
+    assert.match(md, /### Unanswered objectives/);
+    assert.match(md, /- PS: /);
+    assert.match(md, /stale is not a MET breaker/);
+    assert.match(md, /stale: Stale IdP login screenshot/);
+    assert.match(md, /unmapped: Unmapped acceptable-use policy/);
+    assert.match(md, /- AC Access Control/);
+    assert.equal(/sub-par/i.test(md), false);
+    assert.match(md, /Not a SPRS file/);
   });
 });

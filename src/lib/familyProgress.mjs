@@ -168,8 +168,241 @@ export function familyProgressBoard(assessment, catalog = catalogFile.requiremen
   };
 }
 
+function evidenceWarning(kind, item) {
+  return {
+    kind,
+    id: str(item?.id),
+    title: str(item?.title) || str(item?.id),
+    evidenceKind: str(item?.kind),
+    href: "/evidence",
+  };
+}
+
+/**
+ * AO/SCA punch list. Family board is the map; this is the remaining work.
+ * Stale / draft / unmapped are warnings, not SPRS findings. Stale is not a MET breaker.
+ */
+export function assemblerPunchList(assessment, catalog = catalogFile.requirements, now = Date.now()) {
+  const evidence = asList(assessment?.evidence);
+  const operationalPoas = asList(assessment?.operationalPoas);
+  const dets =
+    assessment?.determinations && typeof assessment.determinations === "object" ? assessment.determinations : {};
+  const covered = poamCovered(assessment);
+  const reqs = asList(catalog).filter((row) => row && str(row.family) && str(row.reqId));
+  const unansweredAos = [];
+  const missingPoams = [];
+
+  for (const req of reqs) {
+    const rolled = rollupRequirement(req, dets[req.reqId], evidence, operationalPoas);
+    const family = str(req.family);
+    const href = `/requirements?family=${family}`;
+    for (const ao of rolled.objectives) {
+      if (ao.finding !== "not-reviewed") continue;
+      unansweredAos.push({
+        family,
+        reqId: str(req.reqId),
+        cmmcId: str(req.cmmcId),
+        aoId: str(ao.aoId),
+        href,
+      });
+    }
+    if (rolled.finding === "not-met" && !covered.has(str(req.reqId))) {
+      missingPoams.push({
+        family,
+        reqId: str(req.reqId),
+        cmmcId: str(req.cmmcId),
+        href: "/poam",
+      });
+    }
+  }
+
+  const gaps = evidenceGapBoard(reqs, dets, evidence, now);
+  const missingPointers = gaps.missing.map((row) => {
+    const req = reqs.find((item) => str(item.reqId) === str(row.reqId));
+    const family = str(req?.family);
+    return {
+      family,
+      reqId: str(row.reqId),
+      cmmcId: str(row.cmmcId),
+      aoId: str(row.aoId),
+      href: "/evidence",
+    };
+  });
+
+  const openReviews = FAMILIES.filter(
+    (meta) => !isFamilyReviewed(reviewForFamily(assessment?.familyReviews, meta.id)),
+  ).map((meta) => ({
+    family: meta.id,
+    name: meta.name,
+    href: `/requirements?family=${meta.id}`,
+  }));
+
+  const stale = gaps.stale.map((item) => evidenceWarning("stale", item));
+  const draft = gaps.draft.map((item) => evidenceWarning("draft", item));
+  const unmapped = gaps.unmapped.map((item) => evidenceWarning("unmapped", item));
+  const counts = {
+    unansweredAos: unansweredAos.length,
+    missingPointers: missingPointers.length,
+    missingPoams: missingPoams.length,
+    openReviews: openReviews.length,
+    stale: stale.length,
+    draft: draft.length,
+    unmapped: unmapped.length,
+  };
+  counts.work = counts.unansweredAos + counts.missingPointers + counts.missingPoams;
+  counts.warnings = counts.stale + counts.draft + counts.unmapped;
+
+  return {
+    unansweredAos,
+    missingPointers,
+    missingPoams,
+    openReviews,
+    stale,
+    draft,
+    unmapped,
+    counts,
+  };
+}
+
+function familyName(id) {
+  return FAMILIES.find((row) => row.id === id)?.name || id;
+}
+
+function groupByFamily(rows) {
+  const map = new Map();
+  for (const row of asList(rows)) {
+    const key = str(row.family) || "(none)";
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(row);
+  }
+  return map;
+}
+
+/** Home rows: one per family per work kind, plus individual evidence warnings. */
+export function punchListHomeItems(list) {
+  const items = [];
+  const source = list && typeof list === "object" && list.counts ? list : assemblerPunchList(null);
+  for (const [family, rows] of groupByFamily(source.unansweredAos)) {
+    items.push({
+      id: `unanswered-${family}`,
+      kind: "unanswered",
+      severity: "blocker",
+      family,
+      href: `/requirements?family=${family}`,
+      title: `${family}: ${rows.length} unanswered objective${rows.length === 1 ? "" : "s"}`,
+      detail: familyName(family),
+    });
+  }
+  for (const [family, rows] of groupByFamily(source.missingPointers)) {
+    items.push({
+      id: `pointer-${family}`,
+      kind: "missing-pointer",
+      severity: "blocker",
+      family,
+      href: "/evidence",
+      title: `${family}: ${rows.length} MET objective${rows.length === 1 ? "" : "s"} missing a pointer`,
+      detail: familyName(family),
+    });
+  }
+  for (const [family, rows] of groupByFamily(source.missingPoams)) {
+    items.push({
+      id: `poam-${family}`,
+      kind: "missing-poam",
+      severity: "blocker",
+      family,
+      href: "/poam",
+      title: `${family}: ${rows.length} NOT MET requirement${rows.length === 1 ? "" : "s"} missing POA&M`,
+      detail: familyName(family),
+    });
+  }
+  for (const row of [...asList(source.draft), ...asList(source.stale), ...asList(source.unmapped)]) {
+    const kind = str(row.kind);
+    items.push({
+      id: `${kind}-${row.id}`,
+      kind,
+      severity: kind === "draft" ? "blocker" : "warning",
+      family: null,
+      href: "/evidence",
+      title: `${kind}: ${row.title}`,
+      detail:
+        kind === "stale"
+          ? "Freshness warning — not a MET breaker."
+          : kind === "draft"
+            ? "Draft pointers cannot support MET."
+            : "Empty aoIds never credit MET.",
+    });
+  }
+  return items;
+}
+
+function punchListLines(list, limit = 8) {
+  const lines = [
+    "## Punch list (AO/SCA QC)",
+    "",
+    "Remaining assembler work in this pack. Not a SPRS finding. Stale, draft, and unmapped pointers are warnings — stale is not a MET breaker.",
+    "",
+    `- Unanswered objectives: ${list.counts.unansweredAos}`,
+    `- MET missing pointers: ${list.counts.missingPointers}`,
+    `- NOT MET missing POA&M: ${list.counts.missingPoams}`,
+    `- Consultant reviews still open: ${list.counts.openReviews}`,
+    `- Evidence warnings: ${list.counts.stale} stale · ${list.counts.draft} draft · ${list.counts.unmapped} unmapped`,
+    "",
+  ];
+
+  function section(title, rows, labelFn) {
+    lines.push(`### ${title}`);
+    lines.push("");
+    if (!rows.length) {
+      lines.push("None.");
+      lines.push("");
+      return;
+    }
+    for (const [family, group] of groupByFamily(rows)) {
+      const labels = group.map(labelFn);
+      const shown = labels.slice(0, limit);
+      const extra = labels.length - shown.length;
+      const more = extra > 0 ? ` (+${extra} more)` : "";
+      lines.push(`- ${family}: ${shown.join(", ")}${more}`);
+    }
+    lines.push("");
+  }
+
+  section("Unanswered objectives", list.unansweredAos, (row) => row.aoId);
+  section("MET missing pointers", list.missingPointers, (row) => row.aoId);
+  section("NOT MET missing POA&M", list.missingPoams, (row) => row.cmmcId || row.reqId);
+
+  lines.push("### Consultant reviews still open");
+  lines.push("");
+  if (!list.openReviews.length) {
+    lines.push("None.");
+  } else {
+    for (const row of list.openReviews) {
+      lines.push(`- ${row.family} ${row.name}`);
+    }
+  }
+  lines.push("");
+
+  lines.push("### Evidence warnings");
+  lines.push("");
+  const warnings = [...list.draft, ...list.stale, ...list.unmapped];
+  if (!warnings.length) {
+    lines.push("None.");
+  } else {
+    const shown = warnings.slice(0, 12);
+    for (const row of shown) {
+      lines.push(`- ${row.kind}: ${row.title} (${row.id})`);
+    }
+    if (warnings.length > shown.length) {
+      lines.push(`- +${warnings.length - shown.length} more`);
+    }
+  }
+  lines.push("");
+  return lines;
+}
+
 export function handoffMarkdown(assessment, score, catalog = catalogFile.requirements) {
   const board = familyProgressBoard(assessment, catalog);
+  const punch = assemblerPunchList(assessment, catalog);
   const org = assessment?.organization && typeof assessment.organization === "object" ? assessment.organization : {};
   const scope = assessment?.scope && typeof assessment.scope === "object" ? assessment.scope : {};
   const status = score?.status || "assessment-incomplete";
@@ -187,6 +420,7 @@ export function handoffMarkdown(assessment, score, catalog = catalogFile.require
     `- Score: ${score ? `${score.raw}/110` : "—"} (${status})`,
     `- Next: ${board.next.title} — ${board.next.detail}`,
     `- Counts: present ${board.counts.present} · partial ${board.counts.partial} · gapped ${board.counts.gapped} · unfinished ${board.counts.unfinished}`,
+    `- Punch list: ${punch.counts.work} work item${punch.counts.work === 1 ? "" : "s"} · ${punch.counts.openReviews} reviews open · ${punch.counts.warnings} evidence warning${punch.counts.warnings === 1 ? "" : "s"}`,
     "",
     "Completion is assembler work status (unfinished / partial / gapped / present). It is not a SPRS finding.",
     "",
@@ -199,6 +433,7 @@ export function handoffMarkdown(assessment, score, catalog = catalogFile.require
     );
   }
   lines.push("");
+  lines.push(...punchListLines(punch));
   lines.push(SAMPLE_WATERMARK);
   lines.push("");
   return lines.join("\n");

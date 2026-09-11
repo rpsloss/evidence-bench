@@ -5,7 +5,13 @@ import {
   familyReviewRows,
   reviewedFamilyCount,
 } from "../lib/familyReview.mjs";
-import { completionLabel, familyProgressBoard, familyWorkCaption } from "../lib/familyProgress.mjs";
+import {
+  assemblerPunchList,
+  completionLabel,
+  familyProgressBoard,
+  familyWorkCaption,
+  punchListHomeItems,
+} from "../lib/familyProgress.mjs";
 import { useAssessment } from "../lib/store";
 import type { CmmcStatus } from "../types";
 
@@ -35,6 +41,8 @@ export default function Home() {
   const remaining = reviews.length - reviewedCount;
   const prepReady = allReviewed && Boolean(assessment.prepMarkedAt);
   const board = familyProgressBoard(assessment);
+  const punch = assemblerPunchList(assessment);
+  const punchItems = punchListHomeItems(punch);
 
   function markPrep() {
     setAssessment((a) => {
@@ -137,6 +145,52 @@ export default function Home() {
               <span className="muted">{familyWorkCaption(row)}</span>
             </Link>
           ))}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h2>Punch list</h2>
+        <p>
+          Remaining assembler work for the AO/SCA. Not a SPRS finding. Consultant reviews stay in the table below.
+          Stale pointers are freshness warnings — they do not break MET.
+        </p>
+        <div className="grid kpi" style={{ marginBottom: 12 }}>
+          <div className="card kpi">
+            <div className="label">Unanswered</div>
+            <div className="value">{punch.counts.unansweredAos}</div>
+          </div>
+          <div className="card kpi">
+            <div className="label">Missing pointers</div>
+            <div className="value">{punch.counts.missingPointers}</div>
+          </div>
+          <div className="card kpi">
+            <div className="label">Missing POA&M</div>
+            <div className="value">{punch.counts.missingPoams}</div>
+          </div>
+          <div className="card kpi">
+            <div className="label">Evidence warnings</div>
+            <div className="value">{punch.counts.warnings}</div>
+          </div>
+        </div>
+        {punch.counts.work === 0 ? (
+          <p className="helper">
+            Family work is present. Remaining: {punch.counts.openReviews} consultant review
+            {punch.counts.openReviews === 1 ? "" : "s"}
+            {punch.counts.warnings ? ` and ${punch.counts.warnings} evidence warning${punch.counts.warnings === 1 ? "" : "s"}` : ""}.
+          </p>
+        ) : null}
+        <div className="list">
+          {punchItems.length === 0 ? (
+            <div className="card">Punch list is empty. Mark Export-ready, then type CSV into SPRS by hand.</div>
+          ) : (
+            punchItems.map((row) => (
+              <Link key={row.id} className="blocker-item" to={row.href}>
+                <span className={`pill ${row.severity}`}>{row.kind}</span>
+                <h3>{row.title}</h3>
+                <div className="muted">{row.detail}</div>
+              </Link>
+            ))
+          )}
         </div>
       </div>
 

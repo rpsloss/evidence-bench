@@ -10,7 +10,12 @@ import {
   SAMPLE_WATERMARK,
   sprsPreviewRows,
 } from "../lib/exportPack.mjs";
-import { completionLabel, familyProgressRows, familyWorkCaption } from "../lib/familyProgress.mjs";
+import {
+  assemblerPunchList,
+  completionLabel,
+  familyProgressRows,
+  familyWorkCaption,
+} from "../lib/familyProgress.mjs";
 import { reportAssessmentAccess, useAssessment } from "../lib/store";
 
 export default function ExportPage() {
@@ -20,6 +25,7 @@ export default function ExportPage() {
   const checklist = useMemo(() => affirmationChecklist(assessment, score), [assessment, score]);
   const reviewsDone = familyReviewsComplete(assessment);
   const zipOk = canExportZip(assessment);
+  const punch = useMemo(() => assemblerPunchList(assessment), [assessment]);
   const prep = assessment.prepMarkedAt;
   const reviewByFamily = useMemo(() => {
     const map = new Map<string, { reviewed: boolean; reviewer: string }>();
@@ -134,6 +140,8 @@ export default function ExportPage() {
           ) : null}
           <p className="helper">
             Assembler snapshot is allowed while families are unfinished or partial. It omits sprs-manual-entry.csv.
+            HANDOFF.md punch list: {punch.counts.unansweredAos} unanswered · {punch.counts.missingPointers} missing
+            pointers · {punch.counts.missingPoams} missing POA&M · {punch.counts.warnings} evidence warnings.
           </p>
           <div className="row">
             <button type="button" disabled={busy || readOnly} onClick={() => void downloadSnapshot()}>

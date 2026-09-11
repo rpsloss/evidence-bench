@@ -674,7 +674,7 @@ function readmeMd(assessment, score, checklist, ready) {
     "",
     "Type sprs-manual-entry.csv into SPRS by hand. Not a SPRS submission.",
     "COLUMNS.md is the plain-language glossary for every CSV header (cmmcId, reqId, mfaState, …).",
-    "HANDOFF.md is the assembler cover sheet for the AO/SCA. Completion status is unfinished / partial / gapped / present — not a SPRS finding.",
+    "HANDOFF.md is the assembler cover sheet for the AO/SCA, including the punch list. Completion status is unfinished / partial / gapped / present — not a SPRS finding.",
     SAMPLE_WATERMARK,
     "",
   ].join("\n");
@@ -690,6 +690,7 @@ function snapshotReadme(assessment, score) {
     "",
     CHECKLIST_PREFIX,
     "Mid-cycle QC pack for the AO/SCA. This zip is allowed while families are unfinished or partial.",
+    "HANDOFF.md includes the punch list (unanswered objectives, missing pointers, missing POA&M, open reviews, evidence warnings).",
     "It does not include sprs-manual-entry.csv. That file lives only in the SPRS-prep zip, which still refuses unanswered objectives.",
     "The app never submits, signs, or affirms.",
     "",
