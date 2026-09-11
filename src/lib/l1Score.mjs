@@ -152,6 +152,16 @@ export function nextL1Action(assessment, catalog = l1CatalogFile.requirements) {
       detail: `${gapped.notMet} NOT MET Level 1 requirement(s) in ${gapped.name}. POA&M is not permitted (32 CFR 170.21(a)(1)).`,
     };
   }
+  const working = assessment?.engagement?.workingLevel;
+  const required = assessment?.engagement?.requiredLevel;
+  if (working === "level-1-self" && required === "level-2-self") {
+    return {
+      href: "/intake",
+      title: "Promote to Level 2",
+      detail:
+        "Level 1 floor is answered. Promote to keep org, assets, and the 17 mapped practices, then work the L2 delta.",
+    };
+  }
   return {
     href: "/export",
     title: "Level 1 SPRS pack next",

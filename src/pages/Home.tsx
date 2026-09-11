@@ -22,6 +22,13 @@ import {
   punchListHomeItems,
 } from "../lib/familyProgress.mjs";
 import { l1FamilyProgress, nextL1Action } from "../lib/l1Score.mjs";
+import { buildHarborL1First } from "../data/harbor-precision.mjs";
+import {
+  canPromoteToL2,
+  l2DeltaPunchList,
+  promoteErrorMessage,
+  promoteToL2,
+} from "../lib/l1Promote.mjs";
 import { useAssessment } from "../lib/store";
 import type { CmmcStatus } from "../types";
 
@@ -51,14 +58,16 @@ export default function Home() {
   const remaining = reviews.length - reviewedCount;
   const prepReady = allReviewed && Boolean(assessment.prepMarkedAt);
   const board = familyProgressBoard(assessment);
-  const punch = assemblerPunchList(assessment);
-  const punchItems = punchListHomeItems(punch);
   const engagement = normalizeEngagement(assessment.engagement);
+  const promoted = Boolean(engagement.promotedFromL1At);
+  const punch = promoted && !isWorkingLevel1(engagement) ? l2DeltaPunchList(assessment) : assemblerPunchList(assessment);
+  const punchItems = punchListHomeItems(punch);
   const l1Next = nextL1Action(assessment);
   const l1Board = l1FamilyProgress(assessment);
   const next = engagementNextAction(engagement, board.next, l1Next);
   const workingL1 = isWorkingLevel1(engagement);
   const cages = uniqueCages(org, engagement);
+  const promo = canPromoteToL2(assessment);
 
   function markPrep() {
     setAssessment((a) => {
@@ -69,6 +78,16 @@ export default function Home() {
 
   function clearPrep() {
     setAssessment((a) => ({ ...a, prepMarkedAt: null }));
+  }
+
+  function loadL1First() {
+    setAssessment(() => buildHarborL1First());
+  }
+
+  function promote() {
+    const nextPack = promoteToL2(assessment);
+    if (!nextPack.ok) return;
+    setAssessment(() => nextPack.assessment);
   }
 
   return (
@@ -90,6 +109,14 @@ export default function Home() {
         <button type="button" onClick={loadSample}>
           Reload Harbor Precision seed
         </button>
+        <button type="button" onClick={loadL1First}>
+          Load L1-first Harbor
+        </button>
+        {promo.ok ? (
+          <button type="button" className="primary" disabled={readOnly} onClick={promote}>
+            Promote to Level 2
+          </button>
+        ) : null}
         <Link className="btn" to="/export">
           Export
         </Link>
@@ -138,6 +165,16 @@ export default function Home() {
               <strong>Level 1 (Self) · {l1Score.complianceResult || "incomplete"}.</strong> {l1Score.met} of{" "}
               {l1Score.total} FAR rows MET. {l1Score.unanswered} unanswered. {l1Score.notMet} NOT MET. POA&M is not
               permitted (32 CFR 170.21(a)(1)).
+              {promo.ok ? " Promote when the floor is done — the 17 mapped practices carry into Level 2." : ""}
+              {!promo.ok && promo.error ? ` ${promoteErrorMessage(promo.error)}` : ""}
+            </div>
+          </div>
+        ) : null}
+        {promoted && !workingL1 ? (
+          <div className="banner" style={{ marginBottom: 0 }}>
+            <div>
+              <strong>Promoted from Level 1.</strong> {engagement.l1CreditedReqIds.length} mapped practices credited.
+              Punch list below is the L2 delta, not a blank 110.
             </div>
           </div>
         ) : null}
@@ -247,10 +284,11 @@ export default function Home() {
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h2>Punch list</h2>
+        <h2>{promoted ? "L2 delta punch list" : "Punch list"}</h2>
         <p>
-          Remaining assembler work for the AO/SCA. Not a SPRS finding. Consultant reviews stay in the table below.
-          Stale pointers are freshness warnings — they do not break MET.
+          {promoted
+            ? "Remaining Level 2 work after the Level 1 floor. The 17 mapped practices are credited, not blank. Not a SPRS finding."
+            : "Remaining assembler work for the AO/SCA. Not a SPRS finding. Consultant reviews stay in the table below. Stale pointers are freshness warnings — they do not break MET."}
         </p>
         <div className="grid kpi" style={{ marginBottom: 12 }}>
           <div className="card kpi">

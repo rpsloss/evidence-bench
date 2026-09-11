@@ -154,7 +154,9 @@ export default function Requirements() {
   const { assessment, score, l1Score, setAssessment, readOnly } = useAssessment();
   const [params] = useSearchParams();
   const [family, setFamily] = useState("AC");
-  const workingL1 = isWorkingLevel1(normalizeEngagement(assessment.engagement));
+  const engagement = normalizeEngagement(assessment.engagement);
+  const workingL1 = isWorkingLevel1(engagement);
+  const credited = new Set(engagement.l1CreditedReqIds);
   const families = workingL1 ? L1_FAMILIES : FAMILIES;
   const activeCatalog = workingL1 ? L1_CATALOG : CATALOG;
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -375,6 +377,7 @@ export default function Requirements() {
           {familyReqs.map((req) => {
             const finding = derivedFinding(req);
             const openObj = !workingL1 && req.partialCredit ? "Open Objectives" : "";
+            const fromL1 = !workingL1 && credited.has(req.reqId);
             return (
               <tr
                 key={req.reqId}
@@ -390,6 +393,12 @@ export default function Requirements() {
                     <>
                       <br />
                       <span className="pill info">{openObj}</span>
+                    </>
+                  ) : null}
+                  {fromL1 ? (
+                    <>
+                      <br />
+                      <span className="pill ok">L1 credited</span>
                     </>
                   ) : null}
                 </td>

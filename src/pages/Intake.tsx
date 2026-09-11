@@ -10,6 +10,12 @@ import {
   type InformationType,
   type WorkingLevel,
 } from "../lib/engagement.mjs";
+import { buildHarborL1First } from "../data/harbor-precision.mjs";
+import {
+  canPromoteToL2,
+  promoteErrorMessage,
+  promoteToL2,
+} from "../lib/l1Promote.mjs";
 import { useAssessment } from "../lib/store";
 import type { Engagement, EngagementClauses, Organization } from "../types";
 
@@ -70,6 +76,14 @@ export default function Intake() {
     }
     const n = Number(raw);
     patchOrg({ employeeCount: Number.isFinite(n) ? n : org.employeeCount });
+  }
+
+  const promo = canPromoteToL2(assessment);
+
+  function promote() {
+    const next = promoteToL2(assessment);
+    if (!next.ok) return;
+    setAssessment(() => next.assessment);
   }
 
   function onExtraCages(text: string) {
@@ -149,6 +163,27 @@ export default function Intake() {
             </div>
             {!l2Allowed ? (
               <p className="helper">Level 2 is disabled until intake says CUI (or both) is in play.</p>
+            ) : null}
+            <p className="helper">
+              Switching Level 2 here does not credit the L1 floor. Use Promote after the 15 FAR rows are answered.
+            </p>
+            <div className="row">
+              <button type="button" className="primary" disabled={readOnly || !promo.ok} onClick={promote}>
+                Promote to Level 2
+              </button>
+              <button
+                type="button"
+                disabled={readOnly}
+                onClick={() => setAssessment(() => buildHarborL1First())}
+              >
+                Load L1-first Harbor
+              </button>
+            </div>
+            {!promo.ok ? <p className="helper">{promoteErrorMessage(promo.error)}</p> : null}
+            {engagement.promotedFromL1At ? (
+              <p className="helper">
+                Promoted {engagement.promotedFromL1At}. {engagement.l1CreditedReqIds.length} mapped practices credited.
+              </p>
             ) : null}
           </div>
           <div className="card">

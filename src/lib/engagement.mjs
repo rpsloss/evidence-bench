@@ -30,6 +30,8 @@ export function emptyEngagement() {
     additionalCages: [],
     currentPhase: "intake",
     intakeNotedAt: null,
+    promotedFromL1At: null,
+    l1CreditedReqIds: [],
   };
 }
 
@@ -119,6 +121,14 @@ export function normalizeEngagement(raw) {
   };
   const intakeNotedAt = informationType === "unknown" ? null : str(src.intakeNotedAt).trim() || null;
   const currentPhase = derivePhase({ requiredLevel, workingLevel, intakeNotedAt });
+  const credited = [];
+  const seen = new Set();
+  for (const raw of asList(src.l1CreditedReqIds)) {
+    const id = str(raw).trim();
+    if (!/^\d+\.\d+\.\d+$/.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    credited.push(id);
+  }
   return {
     informationType,
     requiredLevel,
@@ -127,6 +137,8 @@ export function normalizeEngagement(raw) {
     additionalCages: normalizeAdditionalCages(src.additionalCages),
     currentPhase,
     intakeNotedAt,
+    promotedFromL1At: str(src.promotedFromL1At).trim() || null,
+    l1CreditedReqIds: credited,
   };
 }
 

@@ -3,6 +3,7 @@
 import catalogFile from "./catalog.json" with { type: "json" };
 import catalogMeta from "./catalog.meta.json" with { type: "json" };
 import { generateSspOutline } from "../lib/sspGenerate.mjs";
+import { l1MappedAoIdSet, l1MappedReqIdSet, unansweredDet } from "../lib/l1Promote.mjs";
 
 const NOT_MET_SEED = new Set(["3.2.3", "3.4.9"]);
 const EVIDENCE_CAPTURED = "2026-08-01T00:00:00Z";
@@ -259,4 +260,38 @@ export function buildHarborPrecision() {
   // 3.12.4 body must be present so clearing it can demonstrate assessment-incomplete.
   assessment.ssp = generateSspOutline(assessment);
   return assessment;
+}
+
+/** CUI shop that finished the Level 1 floor. The other 93 L2 practices are unanswered. */
+export function buildHarborL1First() {
+  const seed = buildHarborPrecision();
+  const mapped = l1MappedReqIdSet();
+  const l1Aos = l1MappedAoIdSet();
+  const determinations = {};
+  for (const req of catalogFile.requirements) {
+    if (!req?.reqId) continue;
+    determinations[req.reqId] = mapped.has(req.reqId) ? seed.determinations[req.reqId] : unansweredDet(req);
+  }
+  const evidence = seed.evidence
+    .map((item) => ({
+      ...item,
+      aoIds: Array.isArray(item.aoIds) ? item.aoIds.filter((id) => l1Aos.has(id)) : [],
+    }))
+    .filter((item) => (item.aoIds && item.aoIds.length > 0) || item.id === "ev-unmapped-policy");
+  return {
+    ...seed,
+    id: "asmt-harbor-precision-l1-first",
+    determinations,
+    evidence,
+    poams: [],
+    familyReviews: [],
+    prepMarkedAt: null,
+    ssp: [],
+    engagement: {
+      ...seed.engagement,
+      workingLevel: "level-1-self",
+      promotedFromL1At: null,
+      l1CreditedReqIds: [],
+    },
+  };
 }

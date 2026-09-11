@@ -31,6 +31,8 @@ export interface Engagement {
   additionalCages: string[];
   currentPhase: EngagementPhase;
   intakeNotedAt: string | null;
+  promotedFromL1At: string | null;
+  l1CreditedReqIds: string[];
 }
 
 export interface Organization {
