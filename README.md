@@ -2,7 +2,9 @@
 
 **UNCLASSIFIED. Sample / fictional data only. Not a SPRS submission. Not a C3PAO tool. Not legal advice.**
 
-Local Castleridge engagement kit for walking one fictional shop through **CMMC Level 1 (Self) then Level 2 (Self)**. **SPRS remains the system of record via human entry.** Intake decides FCI vs CUI before the 110-practice board. The Level 1 catalog (15 FAR 52.204-21 rows) is the next slice. The seeded organization (**Harbor Precision**) is fictional CUI → Level 2. CAGE `XXXXX` is an obvious fake. The app never submits, signs, or affirms.
+Local Castleridge **Evidence Bench** for walking one fictional shop through **CMMC Level 1 (Self) then Level 2 (Self)**. **SPRS remains the system of record via human entry.** Intake decides FCI vs CUI before the 110-practice board. The seeded organization (**Harbor Precision**) is fictional CUI → Level 2. CAGE `XXXXX` is an obvious fake. The app never submits, signs, or affirms.
+
+GitHub: [rpsloss/evidence-bench](https://github.com/rpsloss/evidence-bench).
 
 Castleridge Solutions is Hawaiʻi-based. This product stores **unclassified pointers only** — no CUI blobs, no multipart upload.
 
