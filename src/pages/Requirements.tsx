@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import catalogFile from "../data/catalog.json";
+import l1CatalogFile from "../data/l1-catalog.json";
+import { isWorkingLevel1, normalizeEngagement } from "../lib/engagement.mjs";
 import {
   FAMILIES,
   allFamiliesReviewed,
   reviewForFamily,
   upsertFamilyReview,
 } from "../lib/familyReview.mjs";
+import { L1_FAMILIES, l1FamilyProgress } from "../lib/l1Score.mjs";
 import { completionLabel, familyProgressRows } from "../lib/familyProgress.mjs";
 import {
   deriveFipsAoFinding,
@@ -29,6 +32,7 @@ const FINDING_OPTIONS: { value: Finding; label: string }[] = [
 ];
 
 const CATALOG = catalogFile.requirements as CatalogRequirement[];
+const L1_CATALOG = l1CatalogFile.requirements as CatalogRequirement[];
 
 function findingLabel(finding: Finding) {
   if (finding === "met") return "MET";
@@ -147,32 +151,45 @@ function FindingSelect({
 }
 
 export default function Requirements() {
-  const { assessment, score, setAssessment, readOnly } = useAssessment();
+  const { assessment, score, l1Score, setAssessment, readOnly } = useAssessment();
   const [params] = useSearchParams();
   const [family, setFamily] = useState("AC");
+  const workingL1 = isWorkingLevel1(normalizeEngagement(assessment.engagement));
+  const families = workingL1 ? L1_FAMILIES : FAMILIES;
+  const activeCatalog = workingL1 ? L1_CATALOG : CATALOG;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [naError, setNaError] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
 
   useEffect(() => {
     const wanted = (params.get("family") || "").trim().toUpperCase();
-    if (FAMILIES.some((row) => row.id === wanted)) {
+    if (families.some((row) => row.id === wanted)) {
       setFamily(wanted);
       setSelectedId(null);
       setNaError(null);
       setReviewError(null);
+      return;
     }
-  }, [params]);
+    if (!families.some((row) => row.id === family)) {
+      setFamily(families[0]?.id || "AC");
+      setSelectedId(null);
+    }
+  }, [params, workingL1, families, family]);
 
-  const familyReqs = useMemo(() => CATALOG.filter((row) => row.family === family), [family]);
+  const familyReqs = useMemo(() => activeCatalog.filter((row) => row.family === family), [activeCatalog, family]);
   const selected = familyReqs.find((row) => row.reqId === selectedId) ?? null;
-  const familyMeta = FAMILIES.find((row) => row.id === family);
+  const familyMeta = families.find((row) => row.id === family);
   const familyReview = reviewForFamily(assessment.familyReviews, family);
   const progressByFamily = useMemo(
     () => new Map(familyProgressRows(assessment).map((row) => [row.family, row])),
     [assessment],
   );
-  const familyProgress = progressByFamily.get(family);
+  const l1ProgressByFamily = useMemo(
+    () => new Map(l1FamilyProgress(assessment).map((row) => [row.family, row])),
+    [assessment],
+  );
+  const familyProgress = workingL1 ? l1ProgressByFamily.get(family) : progressByFamily.get(family);
+  const l1FamilyRow = workingL1 ? l1ProgressByFamily.get(family) : null;
 
   function derivedFinding(req: CatalogRequirement): Finding {
     return rollupRequirement(req, assessment.determinations[req.reqId], assessment.evidence, assessment.operationalPoas)
@@ -287,19 +304,19 @@ export default function Requirements() {
 
   return (
     <div>
-      <div className="kicker">Requirements · 171A objectives</div>
+      <div className="kicker">{workingL1 ? "Requirements · Level 1 · FAR 52.204-21" : "Requirements · 171A objectives"}</div>
       <h1>Requirements</h1>
       <WorkingLevelNote />
       <p>
-        Findings are per assessment objective. The requirement row is a derived roll-up — you cannot mark a
-        requirement MET directly. Requirement N/A needs <span className="mono">naAllowed</span> and a justification.
-        MET without a non-draft, non-interview 171A pointer stays not-reviewed (32 CFR 170.24(b)(1)). SAMPLE data only.
+        {workingL1
+          ? "Level 1 is 15 FAR 52.204-21 requirements mapped to 17 NIST 800-171 IDs. Assess 171A objectives with FCI in place of CUI. All must be MET. No POA&M (32 CFR 170.15 / 170.21(a)(1)). PE.L1-b.1.ix is one FAR row split into 3.10.3, 3.10.4, and 3.10.5. SAMPLE data only."
+          : "Findings are per assessment objective. The requirement row is a derived roll-up — you cannot mark a requirement MET directly. Requirement N/A needs naAllowed and a justification. MET without a non-draft, non-interview 171A pointer stays not-reviewed (32 CFR 170.24(b)(1)). SAMPLE data only."}
       </p>
 
       <div className="family-tabs" role="tablist" aria-label="Requirement families">
-        {FAMILIES.map((row) => {
-          const reviewed = reviewForFamily(assessment.familyReviews, row.id).reviewed;
-          const progress = progressByFamily.get(row.id);
+        {families.map((row) => {
+          const reviewed = workingL1 ? false : reviewForFamily(assessment.familyReviews, row.id).reviewed;
+          const progress = workingL1 ? l1ProgressByFamily.get(row.id) : progressByFamily.get(row.id);
           const completion = progress?.completion || "unfinished";
           return (
             <button
@@ -328,12 +345,20 @@ export default function Requirements() {
           {family} · {familyMeta?.name}
         </h2>
         <p className="muted" style={{ marginBottom: 0 }}>
-          {familyReqs.length} requirements. Live score {score ? `${score.raw}/110` : "—"}. Completion:{" "}
-          {completionLabel(familyProgress?.completion || "unfinished")}
-          {familyProgress
-            ? ` · ${familyProgress.unansweredAos} of ${familyProgress.aoCount} objectives unanswered`
+          {familyReqs.length} requirements.{" "}
+          {workingL1
+            ? `Level 1 ${l1Score.complianceResult || "incomplete"} · ${l1Score.met}/${l1Score.total} FAR rows MET.`
+            : `Live score ${score ? `${score.raw}/110` : "—"}.`}{" "}
+          Completion: {completionLabel(familyProgress?.completion || "unfinished")}
+          {l1FamilyRow
+            ? ` · ${l1FamilyRow.unanswered} of ${l1FamilyRow.groupCount} FAR rows unanswered`
+            : familyProgress && "unansweredAos" in familyProgress
+              ? ` · ${familyProgress.unansweredAos} of ${familyProgress.aoCount} objectives unanswered`
+              : ""}
+          {!workingL1 && familyProgress && "evidenceGaps" in familyProgress && familyProgress.evidenceGaps
+            ? ` · ${familyProgress.evidenceGaps} evidence gaps`
             : ""}
-          {familyProgress?.evidenceGaps ? ` · ${familyProgress.evidenceGaps} evidence gaps` : ""}.
+          .
         </p>
       </div>
 
@@ -342,14 +367,14 @@ export default function Requirements() {
           <tr>
             <th>ID</th>
             <th>Title</th>
-            <th>Weight</th>
+            <th>{workingL1 ? "FAR" : "Weight"}</th>
             <th>Finding</th>
           </tr>
         </thead>
         <tbody>
           {familyReqs.map((req) => {
             const finding = derivedFinding(req);
-            const openObj = req.partialCredit ? "Open Objectives" : "";
+            const openObj = !workingL1 && req.partialCredit ? "Open Objectives" : "";
             return (
               <tr
                 key={req.reqId}
@@ -369,7 +394,7 @@ export default function Requirements() {
                   ) : null}
                 </td>
                 <td>{req.title}</td>
-                <td>{req.weight}</td>
+                <td>{workingL1 ? (req as CatalogRequirement & { farParagraph?: string }).farParagraph || "—" : req.weight}</td>
                 <td>
                   <span className={`pill ${finding}`}>{findingLabel(finding)}</span>
                 </td>
@@ -379,6 +404,7 @@ export default function Requirements() {
         </tbody>
       </table>
 
+      {!workingL1 ? (
       <fieldset className="stack" disabled={readOnly} style={{ marginTop: 16 }}>
         <div className="card">
           <h2>
@@ -433,6 +459,7 @@ export default function Requirements() {
           ) : null}
         </div>
       </fieldset>
+      ) : null}
 
       {selected ? (
         <RequirementDetail

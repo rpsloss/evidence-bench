@@ -127,8 +127,8 @@ export default function Intake() {
           <div className="card">
             <h2>Working level</h2>
             <p className="helper">
-              FCI-only cannot open Level 2. CUI shops may still run Level 1 as a floor check. The Level 1 catalog is
-              the next slice.
+              FCI-only cannot open Level 2. CUI shops may still run Level 1 as a floor check. Level 1 Requirements
+              uses the frozen 15 FAR / 17 mapped 171A catalog.
             </p>
             <div className="row">
               <button

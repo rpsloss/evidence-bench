@@ -120,8 +120,8 @@ describe("engagement intake", () => {
     assert.equal(forced.currentPhase, "l1-prep");
     assert.equal(isWorkingLevel1(forced), true);
     const next = engagementNextAction(forced);
-    assert.equal(next.href, "/intake");
-    assert.match(next.title, /Level 1 catalog next/);
+    assert.equal(next.href, "/requirements");
+    assert.match(next.title, /Open Level 1/);
     assert.match(next.detail, /no POA&M/);
 
     const missing = normalizeEngagement(undefined);

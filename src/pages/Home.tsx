@@ -21,6 +21,7 @@ import {
   familyWorkCaption,
   punchListHomeItems,
 } from "../lib/familyProgress.mjs";
+import { l1FamilyProgress, nextL1Action } from "../lib/l1Score.mjs";
 import { useAssessment } from "../lib/store";
 import type { CmmcStatus } from "../types";
 
@@ -38,7 +39,7 @@ function when(iso: string | null) {
 }
 
 export default function Home() {
-  const { assessment, score, loadSample, setAssessment, readOnly } = useAssessment();
+  const { assessment, score, l1Score, loadSample, setAssessment, readOnly } = useAssessment();
   const org = assessment.organization;
   const chips = topBlockers(assessment, score, 5);
   const all = combinedBlockers(assessment, score);
@@ -53,7 +54,9 @@ export default function Home() {
   const punch = assemblerPunchList(assessment);
   const punchItems = punchListHomeItems(punch);
   const engagement = normalizeEngagement(assessment.engagement);
-  const next = engagementNextAction(engagement, board.next);
+  const l1Next = nextL1Action(assessment);
+  const l1Board = l1FamilyProgress(assessment);
+  const next = engagementNextAction(engagement, board.next, l1Next);
   const workingL1 = isWorkingLevel1(engagement);
   const cages = uniqueCages(org, engagement);
 
@@ -132,8 +135,9 @@ export default function Home() {
         {workingL1 ? (
           <div className="banner warn" style={{ marginBottom: 0 }}>
             <div>
-              <strong>Level 1 catalog is the next slice.</strong> Do not treat the 110-practice board as Level 1.
-              POA&M is not permitted on a Level 1 self-assessment (32 CFR 170.21(a)(1)).
+              <strong>Level 1 (Self) · {l1Score.complianceResult || "incomplete"}.</strong> {l1Score.met} of{" "}
+              {l1Score.total} FAR rows MET. {l1Score.unanswered} unanswered. {l1Score.notMet} NOT MET. POA&M is not
+              permitted (32 CFR 170.21(a)(1)).
             </div>
           </div>
         ) : null}
@@ -168,7 +172,38 @@ export default function Home() {
         </div>
       </div>
 
-      {!workingL1 ? (
+      {workingL1 ? (
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h2>Level 1 family board</h2>
+        <p>
+          Six FAR families. Completion is unfinished, partial, gapped, or present — not a SPRS finding. Gapped means
+          NOT MET. There is no POA&M path.
+        </p>
+        <div className="grid families" style={{ gridTemplateColumns: "repeat(6, minmax(0, 1fr))" }}>
+          {l1Board.map((row) => (
+            <Link
+              key={row.family}
+              className={`family-cell ${row.completion}`}
+              to={`/requirements?family=${row.family}`}
+            >
+              <span className="mono">{row.family}</span>
+              <span className={`pill ${row.completion === "present" ? "ok" : row.completion === "partial" ? "info" : row.completion === "gapped" ? "warning" : "blocker"}`}>
+                {completionLabel(row.completion)}
+              </span>
+              <span className="muted">
+                {row.completion === "unfinished"
+                  ? "not started"
+                  : row.completion === "partial"
+                    ? `${row.unanswered} unanswered`
+                    : row.completion === "gapped"
+                      ? `${row.notMet} NOT MET`
+                      : `${row.met} MET`}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+      ) : (
       <>
       <div className="card" style={{ marginBottom: 16 }}>
         <h2>Assembler board</h2>
@@ -257,7 +292,7 @@ export default function Home() {
         </div>
       </div>
       </>
-      ) : null}
+      )}
 
       <div className="card" style={{ marginBottom: 16 }}>
         <h2>Identity</h2>

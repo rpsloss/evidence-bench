@@ -12,7 +12,7 @@ export default function WorkingLevelNote({ page }: { page?: string }) {
         <strong>{poam ? "POA&M is not permitted at Level 1." : "Working Level 1 (Self)."}</strong>{" "}
         {poam
           ? "32 CFR 170.21(a)(1). This register is Level 2 tooling. Insert is disabled while the engagement is on Level 1."
-          : "Level 1 is 15 FAR 52.204-21 requirements, all MET, no POA&M (32 CFR 170.15). The 110-practice board, SSP, and SPRS CSV are Level 2 tooling. The Level 1 catalog is the next slice."}
+          : "Level 1 is 15 FAR 52.204-21 requirements mapped to 17 NIST 800-171 IDs, assessed at 171A grain with FCI in place of CUI. All MET. No POA&M. The 110-practice board, SSP, and L2 SPRS CSV stay Level 2 tooling."}
       </div>
     </div>
   );

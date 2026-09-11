@@ -136,7 +136,7 @@ export function confirmIntake(engagement, at = new Date().toISOString()) {
   return next;
 }
 
-export function engagementNextAction(engagement, assemblerNext) {
+export function engagementNextAction(engagement, assemblerNext, l1Next) {
   const row = normalizeEngagement(engagement);
   if (row.currentPhase === "intake") {
     return {
@@ -149,11 +149,17 @@ export function engagementNextAction(engagement, assemblerNext) {
     };
   }
   if (row.workingLevel === "level-1-self") {
+    if (l1Next && typeof l1Next === "object") {
+      return {
+        href: str(l1Next.href) || "/requirements",
+        title: str(l1Next.title) || "Open Level 1",
+        detail: str(l1Next.detail) || "Level 1 is 15 FAR 52.204-21 requirements, all MET, no POA&M.",
+      };
+    }
     return {
-      href: "/intake",
-      title: "Level 1 catalog next",
-      detail:
-        "Level 1 is 15 FAR 52.204-21 requirements, all MET, no POA&M. The 15-row catalog is the next slice. Do not treat the 110 board as Level 1.",
+      href: "/requirements",
+      title: "Open Level 1 requirements",
+      detail: "Level 1 is 15 FAR 52.204-21 requirements, all MET, no POA&M. Do not treat the 110 board as Level 1.",
     };
   }
   if (assemblerNext && typeof assemblerNext === "object") {

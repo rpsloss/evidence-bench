@@ -14,6 +14,7 @@ import catalogMeta from "../data/catalog.meta.json";
 import { buildHarborPrecision } from "../data/harbor-precision.mjs";
 import type { CatalogRequirement } from "./rollup.mjs";
 import { CatalogHashMismatch, scoreFromAssessment, type AssessmentScore } from "./score.mjs";
+import { l1ScoreFromAssessment, type L1Score } from "./l1Score.mjs";
 import type { Assessment } from "../types";
 
 export type SaveWarning = { field: string; message: string };
@@ -33,6 +34,7 @@ export function liveScore(assessment: Assessment): AssessmentScore | null {
 type Store = {
   assessment: Assessment;
   score: AssessmentScore | null;
+  l1Score: L1Score;
   loading: boolean;
   saving: boolean;
   lastSaved: string | null;
@@ -93,6 +95,7 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
   const readOnlyRef = useRef(false);
   readOnlyRef.current = readOnly;
   const score = useMemo(() => liveScore(assessment), [assessment]);
+  const l1Score = useMemo(() => l1ScoreFromAssessment(assessment), [assessment]);
 
   useEffect(() => {
     let cancelled = false;
@@ -186,6 +189,7 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
     () => ({
       assessment,
       score,
+      l1Score,
       loading,
       saving,
       lastSaved,
@@ -195,7 +199,7 @@ export function AssessmentProvider({ children }: { children: ReactNode }) {
       setAssessment,
       loadSample,
     }),
-    [assessment, score, loading, saving, lastSaved, error, warnings, readOnly, setAssessment, loadSample],
+    [assessment, score, l1Score, loading, saving, lastSaved, error, warnings, readOnly, setAssessment, loadSample],
   );
 
   return createElement(Ctx.Provider, { value }, children);

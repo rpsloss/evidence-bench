@@ -20,7 +20,7 @@ npm run dev
 
 Open [http://127.0.0.1:5173](http://127.0.0.1:5173). The API listens on **127.0.0.1:8787** (loopback only). CORS is limited to the Vite origin.
 
-Home is an engagement board: information type, required CMMC Status, working level, and phase. Intake is first. The 14-family assembler board (**unfinished / partial / gapped / present**) is Level 2 tooling and stays parked while working Level 1. That completion status is not a SPRS finding. The punch list is remaining L2 work for the AO/SCA. Export still refuses `sprs-manual-entry.csv` while any L2 objective is unanswered. `POST /api/snapshot` always emits a SAMPLE zip with `HANDOFF.md` (cover sheet + punch list) for the AO/SCA, and omits the SPRS CSV. POA&M is disabled on Level 1 (32 CFR 170.21(a)(1)).
+Home is an engagement board: information type, required CMMC Status, working level, and phase. Intake is first. Working Level 1 uses a frozen catalog of **15 FAR 52.204-21 requirements / 17 mapped 171 IDs / 59 171A objectives** (FCI substituted for CUI). All must be MET. No POA&M. The 14-family assembler board is Level 2 tooling and stays parked while working Level 1. That completion status is not a SPRS finding. The punch list is remaining L2 work for the AO/SCA. Export still refuses `sprs-manual-entry.csv` while any L2 objective is unanswered. `POST /api/snapshot` always emits a SAMPLE zip with `HANDOFF.md` (cover sheet + punch list) for the AO/SCA, and omits the SPRS CSV. POA&M is disabled on Level 1 (32 CFR 170.21(a)(1)).
 
 CSV **header names stay frozen** (`cmmcId`, `reqId`, `mfaState`, …). `COLUMNS.md` in the zip is the plain-language glossary. The Export screen shows the same labels: CMMC practice ID, NIST 800-171 ID, finding to type.
 

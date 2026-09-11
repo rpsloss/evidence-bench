@@ -8,7 +8,8 @@
     "dev": "concurrently -n api,web -c blue,green \"node server/index.mjs\" \"vite\"",
     "build": "tsc --noEmit && vite build",
     "start": "NODE_ENV=production node server/index.mjs",
-    "test": "node --test test/*.mjs"
+    "test": "node --test test/*.mjs",
+    "build:l1-catalog": "node scripts/build-l1-catalog.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",

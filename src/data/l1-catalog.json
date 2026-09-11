@@ -1,0 +1,633 @@
+{
+  "schemaVersion": 1,
+  "standard": "CMMC-L1-FAR-52.204-21",
+  "assessmentGuide": "NIST-SP-800-171A-2018-06",
+  "mapping": "32-CFR-170.15-table-2",
+  "comment": "CMMC Level 1 (Self) freeze. 15 FAR 52.204-21(b)(1)(i)–(xv) security requirements map to 17 NIST SP 800-171 R2 IDs. PE.L1-b.1.ix is one FAR requirement assessed as 3.10.3, 3.10.4, and 3.10.5. Objectives are PDF-pure 171A with FCI substituted for CUI per 32 CFR 170.15(c)(1)(i). No POA&M. Not a SPRS submission.",
+  "requirements": [
+    {
+      "cmmcId": "AC.L1-b.1.i",
+      "reqId": "3.1.1",
+      "family": "AC",
+      "title": "Authorized Access Control",
+      "statement": "Limit information system access to authorized users, processes acting on behalf of authorized users, or devices (including other information systems).",
+      "farParagraph": "b.1.i",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.1.1"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.1.1[a]",
+          "letter": "a",
+          "determineIf": "authorized users are identified."
+        },
+        {
+          "aoId": "3.1.1[b]",
+          "letter": "b",
+          "determineIf": "processes acting on behalf of authorized users are identified."
+        },
+        {
+          "aoId": "3.1.1[c]",
+          "letter": "c",
+          "determineIf": "devices (and other systems) authorized to connect to the system are identified."
+        },
+        {
+          "aoId": "3.1.1[d]",
+          "letter": "d",
+          "determineIf": "system access is limited to authorized users."
+        },
+        {
+          "aoId": "3.1.1[e]",
+          "letter": "e",
+          "determineIf": "system access is limited to processes acting on behalf of authorized users."
+        },
+        {
+          "aoId": "3.1.1[f]",
+          "letter": "f",
+          "determineIf": "system access is limited to authorized devices (including other systems)."
+        }
+      ]
+    },
+    {
+      "cmmcId": "AC.L1-b.1.ii",
+      "reqId": "3.1.2",
+      "family": "AC",
+      "title": "Transaction & Function Control",
+      "statement": "Limit information system access to the types of transactions and functions that authorized users are permitted to execute.",
+      "farParagraph": "b.1.ii",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.1.2"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.1.2[a]",
+          "letter": "a",
+          "determineIf": "the types of transactions and functions that authorized users are permitted to execute are defined."
+        },
+        {
+          "aoId": "3.1.2[b]",
+          "letter": "b",
+          "determineIf": "system access is limited to the defined types of transactions and functions for authorized users."
+        }
+      ]
+    },
+    {
+      "cmmcId": "AC.L1-b.1.iii",
+      "reqId": "3.1.20",
+      "family": "AC",
+      "title": "External Connections",
+      "statement": "Verify and control/limit connections to and use of external information systems.",
+      "farParagraph": "b.1.iii",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.1.20"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.1.20[a]",
+          "letter": "a",
+          "determineIf": "connections to external systems are identified."
+        },
+        {
+          "aoId": "3.1.20[b]",
+          "letter": "b",
+          "determineIf": "the use of external systems is identified."
+        },
+        {
+          "aoId": "3.1.20[c]",
+          "letter": "c",
+          "determineIf": "connections to external systems are verified."
+        },
+        {
+          "aoId": "3.1.20[d]",
+          "letter": "d",
+          "determineIf": "the use of external systems is verified."
+        },
+        {
+          "aoId": "3.1.20[e]",
+          "letter": "e",
+          "determineIf": "connections to external systems are controlled/limited."
+        },
+        {
+          "aoId": "3.1.20[f]",
+          "letter": "f",
+          "determineIf": "the use of external systems is controlled/limited."
+        }
+      ]
+    },
+    {
+      "cmmcId": "AC.L1-b.1.iv",
+      "reqId": "3.1.22",
+      "family": "AC",
+      "title": "Control Public Information",
+      "statement": "Control information posted or processed on publicly accessible information systems.",
+      "farParagraph": "b.1.iv",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.1.22"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.1.22[a]",
+          "letter": "a",
+          "determineIf": "individuals authorized to post or process information on publicly accessible systems are identified."
+        },
+        {
+          "aoId": "3.1.22[b]",
+          "letter": "b",
+          "determineIf": "procedures to ensure FCI is not posted or processed on publicly accessible systems are identified."
+        },
+        {
+          "aoId": "3.1.22[c]",
+          "letter": "c",
+          "determineIf": "a review process is in place prior to posting of any content to publicly accessible systems."
+        },
+        {
+          "aoId": "3.1.22[d]",
+          "letter": "d",
+          "determineIf": "content on publicly accessible systems is reviewed to ensure that it does not include FCI."
+        },
+        {
+          "aoId": "3.1.22[e]",
+          "letter": "e",
+          "determineIf": "mechanisms are in place to remove and address improper posting of FCI."
+        }
+      ]
+    },
+    {
+      "cmmcId": "IA.L1-b.1.v",
+      "reqId": "3.5.1",
+      "family": "IA",
+      "title": "Identification",
+      "statement": "Identify information system users, processes acting on behalf of users, or devices.",
+      "farParagraph": "b.1.v",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.5.1"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.5.1[a]",
+          "letter": "a",
+          "determineIf": "system users are identified."
+        },
+        {
+          "aoId": "3.5.1[b]",
+          "letter": "b",
+          "determineIf": "processes acting on behalf of users are identified."
+        },
+        {
+          "aoId": "3.5.1[c]",
+          "letter": "c",
+          "determineIf": "devices accessing the system are identified."
+        }
+      ]
+    },
+    {
+      "cmmcId": "IA.L1-b.1.vi",
+      "reqId": "3.5.2",
+      "family": "IA",
+      "title": "Authentication",
+      "statement": "Authenticate (or verify) the identities of those users, processes, or devices, as a prerequisite to allowing access to organizational information systems.",
+      "farParagraph": "b.1.vi",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.5.2"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.5.2[a]",
+          "letter": "a",
+          "determineIf": "the identity of each user is authenticated or verified as a prerequisite to system access."
+        },
+        {
+          "aoId": "3.5.2[b]",
+          "letter": "b",
+          "determineIf": "the identity of each process acting on behalf of a user is authenticated or verified as a prerequisite to system access."
+        },
+        {
+          "aoId": "3.5.2[c]",
+          "letter": "c",
+          "determineIf": "the identity of each device accessing or connecting to the system is authenticated or verified as a prerequisite to system access."
+        }
+      ]
+    },
+    {
+      "cmmcId": "MP.L1-b.1.vii",
+      "reqId": "3.8.3",
+      "family": "MP",
+      "title": "Media Disposal",
+      "statement": "Sanitize or destroy information system media containing Federal Contract Information before disposal or release for reuse.",
+      "farParagraph": "b.1.vii",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.8.3"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.8.3[a]",
+          "letter": "a",
+          "determineIf": "system media containing FCI is sanitized or destroyed before disposal."
+        },
+        {
+          "aoId": "3.8.3[b]",
+          "letter": "b",
+          "determineIf": "system media containing FCI is sanitized before it is released for reuse."
+        }
+      ]
+    },
+    {
+      "cmmcId": "PE.L1-b.1.viii",
+      "reqId": "3.10.1",
+      "family": "PE",
+      "title": "Limit Physical Access",
+      "statement": "Limit physical access to organizational information systems, equipment, and the respective operating environments to authorized individuals.",
+      "farParagraph": "b.1.viii",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.10.1"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.10.1[a]",
+          "letter": "a",
+          "determineIf": "authorized individuals allowed physical access are identified."
+        },
+        {
+          "aoId": "3.10.1[b]",
+          "letter": "b",
+          "determineIf": "physical access to organizational systems is limited to authorized individuals."
+        },
+        {
+          "aoId": "3.10.1[c]",
+          "letter": "c",
+          "determineIf": "physical access to equipment is limited to authorized individuals."
+        },
+        {
+          "aoId": "3.10.1[d]",
+          "letter": "d",
+          "determineIf": "physical access to operating environments is limited to authorized individuals."
+        }
+      ]
+    },
+    {
+      "cmmcId": "PE.L1-b.1.ix",
+      "reqId": "3.10.3",
+      "family": "PE",
+      "title": "Escort Visitors",
+      "statement": "Escort visitors and monitor visitor activity; maintain audit logs of physical access; and control and manage physical access devices. (Escort visitors and monitor visitor activity.)",
+      "farParagraph": "b.1.ix",
+      "farPhrase": 1,
+      "mappedReqIds": [
+        "3.10.3",
+        "3.10.4",
+        "3.10.5"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.10.3[a]",
+          "letter": "a",
+          "determineIf": "visitors are escorted."
+        },
+        {
+          "aoId": "3.10.3[b]",
+          "letter": "b",
+          "determineIf": "visitor activity is monitored."
+        }
+      ]
+    },
+    {
+      "cmmcId": "PE.L1-b.1.ix",
+      "reqId": "3.10.4",
+      "family": "PE",
+      "title": "Physical Access Logs",
+      "statement": "Escort visitors and monitor visitor activity; maintain audit logs of physical access; and control and manage physical access devices. (Maintain audit logs of physical access.)",
+      "farParagraph": "b.1.ix",
+      "farPhrase": 2,
+      "mappedReqIds": [
+        "3.10.3",
+        "3.10.4",
+        "3.10.5"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.10.4[a]",
+          "letter": "a",
+          "determineIf": "audit logs of physical access are maintained."
+        }
+      ]
+    },
+    {
+      "cmmcId": "PE.L1-b.1.ix",
+      "reqId": "3.10.5",
+      "family": "PE",
+      "title": "Manage Physical Access",
+      "statement": "Escort visitors and monitor visitor activity; maintain audit logs of physical access; and control and manage physical access devices. (Control and manage physical access devices.)",
+      "farParagraph": "b.1.ix",
+      "farPhrase": 3,
+      "mappedReqIds": [
+        "3.10.3",
+        "3.10.4",
+        "3.10.5"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.10.5[a]",
+          "letter": "a",
+          "determineIf": "physical access devices are identified."
+        },
+        {
+          "aoId": "3.10.5[b]",
+          "letter": "b",
+          "determineIf": "physical access devices are controlled."
+        },
+        {
+          "aoId": "3.10.5[c]",
+          "letter": "c",
+          "determineIf": "physical access devices are managed."
+        }
+      ]
+    },
+    {
+      "cmmcId": "SC.L1-b.1.x",
+      "reqId": "3.13.1",
+      "family": "SC",
+      "title": "Boundary Protection",
+      "statement": "Monitor, control, and protect organizational communications (i.e., information transmitted or received by organizational information systems) at the external boundaries and key internal boundaries of the information systems.",
+      "farParagraph": "b.1.x",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.13.1"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.13.1[a]",
+          "letter": "a",
+          "determineIf": "the external system boundary is defined."
+        },
+        {
+          "aoId": "3.13.1[b]",
+          "letter": "b",
+          "determineIf": "key internal system boundaries are defined."
+        },
+        {
+          "aoId": "3.13.1[c]",
+          "letter": "c",
+          "determineIf": "communications are monitored at the external system boundary."
+        },
+        {
+          "aoId": "3.13.1[d]",
+          "letter": "d",
+          "determineIf": "communications are monitored at key internal boundaries."
+        },
+        {
+          "aoId": "3.13.1[e]",
+          "letter": "e",
+          "determineIf": "communications are controlled at the external system boundary."
+        },
+        {
+          "aoId": "3.13.1[f]",
+          "letter": "f",
+          "determineIf": "communications are controlled at key internal boundaries."
+        },
+        {
+          "aoId": "3.13.1[g]",
+          "letter": "g",
+          "determineIf": "communications are protected at the external system boundary."
+        },
+        {
+          "aoId": "3.13.1[h]",
+          "letter": "h",
+          "determineIf": "communications are protected at key internal boundaries."
+        }
+      ]
+    },
+    {
+      "cmmcId": "SC.L1-b.1.xi",
+      "reqId": "3.13.5",
+      "family": "SC",
+      "title": "Public-Access System Separation",
+      "statement": "Implement subnetworks for publicly accessible system components that are physically or logically separated from internal networks.",
+      "farParagraph": "b.1.xi",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.13.5"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.13.5[a]",
+          "letter": "a",
+          "determineIf": "publicly accessible system components are identified."
+        },
+        {
+          "aoId": "3.13.5[b]",
+          "letter": "b",
+          "determineIf": "subnetworks for publicly accessible system components are physically or logically separated from internal networks."
+        }
+      ]
+    },
+    {
+      "cmmcId": "SI.L1-b.1.xii",
+      "reqId": "3.14.1",
+      "family": "SI",
+      "title": "Flaw Remediation",
+      "statement": "Identify, report, and correct information and information system flaws in a timely manner.",
+      "farParagraph": "b.1.xii",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.14.1"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.14.1[a]",
+          "letter": "a",
+          "determineIf": "the time within which to identify system flaws is specified."
+        },
+        {
+          "aoId": "3.14.1[b]",
+          "letter": "b",
+          "determineIf": "system flaws are identified within the specified time frame."
+        },
+        {
+          "aoId": "3.14.1[c]",
+          "letter": "c",
+          "determineIf": "the time within which to report system flaws is specified."
+        },
+        {
+          "aoId": "3.14.1[d]",
+          "letter": "d",
+          "determineIf": "system flaws are reported within the specified time frame."
+        },
+        {
+          "aoId": "3.14.1[e]",
+          "letter": "e",
+          "determineIf": "the time within which to correct system flaws is specified."
+        },
+        {
+          "aoId": "3.14.1[f]",
+          "letter": "f",
+          "determineIf": "system flaws are corrected within the specified time frame."
+        }
+      ]
+    },
+    {
+      "cmmcId": "SI.L1-b.1.xiii",
+      "reqId": "3.14.2",
+      "family": "SI",
+      "title": "Malicious Code Protection",
+      "statement": "Provide protection from malicious code at appropriate locations within organizational information systems.",
+      "farParagraph": "b.1.xiii",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.14.2"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.14.2[a]",
+          "letter": "a",
+          "determineIf": "designated locations for malicious code protection are identified."
+        },
+        {
+          "aoId": "3.14.2[b]",
+          "letter": "b",
+          "determineIf": "protection from malicious code at designated locations is provided."
+        }
+      ]
+    },
+    {
+      "cmmcId": "SI.L1-b.1.xiv",
+      "reqId": "3.14.4",
+      "family": "SI",
+      "title": "Update Malicious Code Protection",
+      "statement": "Update malicious code protection mechanisms when new releases are available.",
+      "farParagraph": "b.1.xiv",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.14.4"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.14.4[a]",
+          "letter": "a",
+          "determineIf": "malicious code protection mechanisms are updated when new releases are available."
+        }
+      ]
+    },
+    {
+      "cmmcId": "SI.L1-b.1.xv",
+      "reqId": "3.14.5",
+      "family": "SI",
+      "title": "System & File Scanning",
+      "statement": "Perform periodic scans of the information system and real-time scans of files from external sources as files are downloaded, opened, or executed.",
+      "farParagraph": "b.1.xv",
+      "farPhrase": null,
+      "mappedReqIds": [
+        "3.14.5"
+      ],
+      "basicOrDerived": "basic",
+      "weight": 0,
+      "poamAllowed": false,
+      "poamBannedForConditional": true,
+      "naAllowed": true,
+      "objectives": [
+        {
+          "aoId": "3.14.5[a]",
+          "letter": "a",
+          "determineIf": "the frequency for malicious code scans is defined."
+        },
+        {
+          "aoId": "3.14.5[b]",
+          "letter": "b",
+          "determineIf": "malicious code scans are performed with the defined frequency."
+        },
+        {
+          "aoId": "3.14.5[c]",
+          "letter": "c",
+          "determineIf": "real-time malicious code scans of files from external sources as files are downloaded, opened, or executed are performed."
+        }
+      ]
+    }
+  ]
+}

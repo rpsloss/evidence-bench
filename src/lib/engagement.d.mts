@@ -67,4 +67,5 @@ export function confirmIntake(engagement: unknown, at?: string): Engagement;
 export function engagementNextAction(
   engagement: unknown,
   assemblerNext?: { href?: string; title?: string; detail?: string } | null,
+  l1Next?: { href?: string; title?: string; detail?: string } | null,
 ): EngagementNextAction;

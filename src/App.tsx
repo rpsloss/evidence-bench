@@ -39,7 +39,7 @@ const links = [
 ] as const;
 
 export default function App() {
-  const { assessment, score, loading, saving, lastSaved, error, warnings, readOnly } = useAssessment();
+  const { assessment, score, l1Score, loading, saving, lastSaved, error, warnings, readOnly } = useAssessment();
   const engagement = normalizeEngagement(assessment.engagement);
   const workingL1 = engagement.workingLevel === "level-1-self";
 
@@ -102,7 +102,14 @@ export default function App() {
               <span className="pill">Not a SPRS submission</span>
               <span className="pill">{levelLabel(engagement.workingLevel)}</span>
               {workingL1 ? (
-                <span className="pill info">L1 catalog next</span>
+                <>
+                  <span className="pill">
+                    {l1Score.met}/{l1Score.total} MET
+                  </span>
+                  <span className={`pill ${l1Score.status === "final-l1-self" ? "ok" : l1Score.status === "not-met" ? "blocker" : "info"}`}>
+                    {l1Score.complianceResult || "Incomplete"}
+                  </span>
+                </>
               ) : (
                 <>
                   <span className="pill">{score ? `${score.raw}/110` : "—"}</span>
