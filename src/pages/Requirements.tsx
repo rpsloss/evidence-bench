@@ -19,6 +19,7 @@ import {
 } from "../lib/rollup.mjs";
 import { useAssessment } from "../lib/store";
 import type { Determination, EvidenceItem, FamilyReview } from "../types";
+import WorkingLevelNote from "../components/WorkingLevelNote";
 
 const FINDING_OPTIONS: { value: Finding; label: string }[] = [
   { value: "not-reviewed", label: "Unanswered" },
@@ -288,6 +289,7 @@ export default function Requirements() {
     <div>
       <div className="kicker">Requirements · 171A objectives</div>
       <h1>Requirements</h1>
+      <WorkingLevelNote />
       <p>
         Findings are per assessment objective. The requirement row is a derived roll-up — you cannot mark a
         requirement MET directly. Requirement N/A needs <span className="mono">naAllowed</span> and a justification.

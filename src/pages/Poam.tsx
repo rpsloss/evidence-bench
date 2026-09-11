@@ -2,8 +2,10 @@ import { useMemo, useState, type FormEvent } from "react";
 import catalogFile from "../data/catalog.json";
 import { citationForIllegal, type PoamItem } from "../lib/poamGuard.mjs";
 import { storedFinding, type CatalogRequirement, type EvidenceItem } from "../lib/rollup.mjs";
+import { isWorkingLevel1, normalizeEngagement } from "../lib/engagement.mjs";
 import { useAssessment } from "../lib/store";
 import type { OperationalPoaItem } from "../types";
+import WorkingLevelNote from "../components/WorkingLevelNote";
 
 const catalog = (catalogFile as { requirements: CatalogRequirement[] }).requirements;
 
@@ -23,6 +25,7 @@ function labelOf(reqId: string) {
 
 export default function Poam() {
   const { assessment, setAssessment, readOnly } = useAssessment();
+  const workingL1 = isWorkingLevel1(normalizeEngagement(assessment.engagement));
   const [form, setForm] = useState({
     reqId: "",
     weakness: "",
@@ -67,7 +70,7 @@ export default function Poam() {
   const selectedReqId = insertChoices.some((req) => req.reqId === form.reqId)
     ? form.reqId
     : (insertChoices[0]?.reqId ?? "");
-  const canInsert = Boolean(selectedReqId) && !readOnly && !busy;
+  const canInsert = Boolean(selectedReqId) && !readOnly && !busy && !workingL1;
 
   async function insertRegister(e: FormEvent) {
     e.preventDefault();
@@ -104,7 +107,7 @@ export default function Poam() {
 
   function addOperational(e: FormEvent) {
     e.preventDefault();
-    if (readOnly) return;
+    if (readOnly || workingL1) return;
     const row: OperationalPoaItem = {
       id: newId("opoam"),
       reqId: opForm.reqId.trim() || "3.12.2",
@@ -121,6 +124,7 @@ export default function Poam() {
     <div>
       <div className="kicker">POA&amp;M · SAMPLE</div>
       <h1>POA&amp;M register</h1>
+      <WorkingLevelNote page="poam" />
       <p>
         Two lists: the 32 CFR 170.21 Conditional register (every NOT MET) and the CA.L2-3.12.2 operational plan of
         action (temporary deficiencies that still score MET). SAMPLE data only. Not a SPRS submission. Not legal advice.
@@ -261,7 +265,7 @@ export default function Poam() {
             Temporary deficiencies that still score MET. This is not the 170.21 Conditional register. A MET row with
             temporaryDeficiency needs a reviewed operational item.
           </p>
-          <fieldset className="stack" disabled={readOnly}>
+          <fieldset className="stack" disabled={readOnly || workingL1}>
             <form onSubmit={addOperational}>
               <label>Requirement</label>
               <input value={opForm.reqId} onChange={(e) => setOpForm((f) => ({ ...f, reqId: e.target.value }))} />

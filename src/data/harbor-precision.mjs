@@ -140,6 +140,20 @@ export function buildHarborPrecision() {
         email: "jordan.hale@harbor-precision.example",
       },
     },
+    engagement: {
+      informationType: "cui",
+      requiredLevel: "level-2-self",
+      workingLevel: "level-2-self",
+      clauses: {
+        far5220421: true,
+        dfars7012: true,
+        dfars7021: true,
+        notes: "Harbor sample subcontract. Fictional clauses. Not a real solicitation.",
+      },
+      additionalCages: [],
+      currentPhase: "l2-prep",
+      intakeNotedAt: "2026-08-01T00:00:00Z",
+    },
     scope: {
       kind: "enclave",
       narrative:

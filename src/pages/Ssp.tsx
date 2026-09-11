@@ -4,6 +4,7 @@ import { scopeBlockers } from "../lib/scope.mjs";
 import { generateSspOutline, scopeGraphHash, sspWarnings } from "../lib/sspGenerate.mjs";
 import { useAssessment } from "../lib/store";
 import type { SspSection } from "../types";
+import WorkingLevelNote from "../components/WorkingLevelNote";
 
 function isReqKey(key: string) {
   return key.startsWith("req:");
@@ -83,6 +84,7 @@ export default function Ssp() {
     <div>
       <div className="kicker">SSP · living stubs</div>
       <h1>System Security Plan</h1>
+      <WorkingLevelNote />
       <p>
         Outline generated from Assessment Scope, assets, CUI flows, and determination stubs. Hard blockers are graph
         only. Stale hash is a warning — the app does not NLP-compare stub text to the boundary. SAMPLE data only. Not a

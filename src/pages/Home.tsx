@@ -1,6 +1,15 @@
 import { Link } from "react-router-dom";
 import { combinedBlockers, topBlockers } from "../lib/blockers.mjs";
 import {
+  engagementNextAction,
+  informationLabel,
+  isWorkingLevel1,
+  levelLabel,
+  normalizeEngagement,
+  phaseLabel,
+  uniqueCages,
+} from "../lib/engagement.mjs";
+import {
   allFamiliesReviewed,
   familyReviewRows,
   reviewedFamilyCount,
@@ -43,6 +52,10 @@ export default function Home() {
   const board = familyProgressBoard(assessment);
   const punch = assemblerPunchList(assessment);
   const punchItems = punchListHomeItems(punch);
+  const engagement = normalizeEngagement(assessment.engagement);
+  const next = engagementNextAction(engagement, board.next);
+  const workingL1 = isWorkingLevel1(engagement);
+  const cages = uniqueCages(org, engagement);
 
   function markPrep() {
     setAssessment((a) => {
@@ -57,15 +70,19 @@ export default function Home() {
 
   return (
     <div>
-      <div className="kicker">Home · readiness</div>
+      <div className="kicker">Home · engagement</div>
       <h1>{org.name}</h1>
       <p>
-        Fictional CMMC Level 2 (Self) prep package. Sample data only. Not a SPRS submission. Live score is local
-        math from the catalog — SPRS remains the system of record via human entry.
+        Fictional Castleridge engagement. Sample data only. Not a SPRS submission. Level follows FCI vs CUI, not
+        headcount. Live L2 score is local math from the 110 catalog — SPRS remains the system of record via human
+        entry.
       </p>
       <div className="row">
-        <Link className="btn primary" to="/scope">
-          Resume
+        <Link className="btn primary" to={next.href}>
+          {next.title}
+        </Link>
+        <Link className="btn" to="/intake">
+          Intake
         </Link>
         <button type="button" onClick={loadSample}>
           Reload Harbor Precision seed
@@ -73,9 +90,53 @@ export default function Home() {
         <Link className="btn" to="/export">
           Export
         </Link>
-        <Link className="btn primary" to={board.next.href}>
-          {board.next.title}
-        </Link>
+        {!workingL1 ? (
+          <Link className="btn" to={board.next.href}>
+            {board.next.title}
+          </Link>
+        ) : null}
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h2>Engagement</h2>
+        <p>
+          {next.detail} Consultant work starts at intake. The assembler board below is Level 2 tooling
+          {workingL1 ? " and is parked while this engagement is on Level 1" : ""}.
+        </p>
+        <div className="grid kpi" style={{ marginBottom: 12 }}>
+          <div className="card kpi">
+            <div className="label">Information</div>
+            <div className="value" style={{ fontSize: "1.25rem" }}>
+              {informationLabel(engagement.informationType)}
+            </div>
+            <div className="muted">Not company size</div>
+          </div>
+          <div className="card kpi">
+            <div className="label">Required status</div>
+            <div className="value" style={{ fontSize: "1.25rem" }}>
+              {levelLabel(engagement.requiredLevel)}
+            </div>
+            <div className="muted">Working {levelLabel(engagement.workingLevel)}</div>
+          </div>
+          <div className="card kpi">
+            <div className="label">Phase</div>
+            <div className="value" style={{ fontSize: "1.25rem" }}>{phaseLabel(engagement.currentPhase)}</div>
+            <div className="muted">{engagement.intakeNotedAt ? "Intake confirmed" : "Intake open"}</div>
+          </div>
+          <div className="card kpi">
+            <div className="label">CAGEs</div>
+            <div className="value" style={{ fontSize: "1.25rem" }}>{cages.length}</div>
+            <div className="muted">{cages.join(" · ") || "unset"}</div>
+          </div>
+        </div>
+        {workingL1 ? (
+          <div className="banner warn" style={{ marginBottom: 0 }}>
+            <div>
+              <strong>Level 1 catalog is the next slice.</strong> Do not treat the 110-practice board as Level 1.
+              POA&M is not permitted on a Level 1 self-assessment (32 CFR 170.21(a)(1)).
+            </div>
+          </div>
+        ) : null}
       </div>
       <div className="grid kpi">
         <div className="card kpi">
@@ -107,6 +168,8 @@ export default function Home() {
         </div>
       </div>
 
+      {!workingL1 ? (
+      <>
       <div className="card" style={{ marginBottom: 16 }}>
         <h2>Assembler board</h2>
         <p>
@@ -193,6 +256,8 @@ export default function Home() {
           )}
         </div>
       </div>
+      </>
+      ) : null}
 
       <div className="card" style={{ marginBottom: 16 }}>
         <h2>Identity</h2>

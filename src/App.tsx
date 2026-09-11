@@ -1,7 +1,9 @@
 import { NavLink, Route, Routes } from "react-router-dom";
+import { levelLabel, normalizeEngagement } from "./lib/engagement.mjs";
 import { useAssessment } from "./lib/store";
 import type { CmmcStatus } from "./types";
 import Home from "./pages/Home";
+import Intake from "./pages/Intake";
 import Scope from "./pages/Scope";
 import Assets from "./pages/Assets";
 import Requirements from "./pages/Requirements";
@@ -26,6 +28,7 @@ function statusClass(status: CmmcStatus | undefined) {
 
 const links = [
   ["/", "Home"],
+  ["/intake", "Intake"],
   ["/scope", "Scope"],
   ["/assets", "Assets"],
   ["/requirements", "Requirements"],
@@ -37,6 +40,8 @@ const links = [
 
 export default function App() {
   const { assessment, score, loading, saving, lastSaved, error, warnings, readOnly } = useAssessment();
+  const engagement = normalizeEngagement(assessment.engagement);
+  const workingL1 = engagement.workingLevel === "level-1-self";
 
   if (loading) {
     return (
@@ -51,7 +56,7 @@ export default function App() {
       <aside className="nav">
         <div className="brand">
           <strong>Evidence Bench</strong>
-          <span>CMMC L2 Self prep</span>
+          <span>{levelLabel(engagement.workingLevel)} prep</span>
         </div>
         {links.map(([to, label]) => (
           <NavLink
@@ -95,8 +100,15 @@ export default function App() {
               <span className="pill">UNCLASSIFIED</span>
               <span className="pill">SAMPLE</span>
               <span className="pill">Not a SPRS submission</span>
-              <span className="pill">{score ? `${score.raw}/110` : "—"}</span>
-              <span className={`pill ${statusClass(score?.status)}`}>{statusLabel(score?.status)}</span>
+              <span className="pill">{levelLabel(engagement.workingLevel)}</span>
+              {workingL1 ? (
+                <span className="pill info">L1 catalog next</span>
+              ) : (
+                <>
+                  <span className="pill">{score ? `${score.raw}/110` : "—"}</span>
+                  <span className={`pill ${statusClass(score?.status)}`}>{statusLabel(score?.status)}</span>
+                </>
+              )}
             </div>
             <strong>UNCLASSIFIED · SAMPLE · Not a SPRS submission.</strong> Fictional seed only. Castleridge
             Solutions is Hawaiʻi-based. This app does not submit, sign, or affirm. Not a C3PAO tool.
@@ -119,6 +131,7 @@ export default function App() {
         ) : null}
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/intake" element={<Intake />} />
           <Route path="/scope" element={<Scope />} />
           <Route path="/assets" element={<Assets />} />
           <Route path="/requirements" element={<Requirements />} />

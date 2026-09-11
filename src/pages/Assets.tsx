@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { scopeBlockers } from "../lib/scope.mjs";
 import { useAssessment } from "../lib/store";
+import WorkingLevelNote from "../components/WorkingLevelNote";
 import type { Asset, AssetCategory, CuiFlow, FlowChannel, SpecializedKind } from "../types";
 
 const CATEGORIES: AssetCategory[] = ["cui", "spa", "crma", "specialized", "oos"];
@@ -49,6 +50,7 @@ export default function Assets() {
     <div>
       <div className="kicker">Assets &amp; CUI flows</div>
       <h1>Assets and flows</h1>
+      <WorkingLevelNote />
       <p>
         Five CMMC L2 asset categories. Specialized mill in the Harbor seed is OT and is <em>not</em> on a CUI flow.
         An out-of-scope asset as an endpoint of an in-boundary flow is a hard graph blocker.

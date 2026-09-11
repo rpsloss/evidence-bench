@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendAudit } from "./auditLog.mjs";
 import { insertPoamItem, validateAssessment } from "./assessment.mjs";
+import { normalizeEngagement } from "../src/lib/engagement.mjs";
 import { errorClass, loadPackage, savePackage, storePaths } from "./packageStore.mjs";
 import { buildHarborPrecision } from "../src/data/harbor-precision.mjs";
 import catalogFile from "../src/data/catalog.json" with { type: "json" };
@@ -55,7 +56,7 @@ export function createApp(options = {}) {
     res.json({
       ok: true,
       systemOfRecord: "SPRS (human entry)",
-      cmmc: "L2-Self-prep",
+      cmmc: "L1-L2-Self-prep",
       framework: "NIST SP 800-171 R2",
     });
   });
@@ -73,7 +74,11 @@ export function createApp(options = {}) {
       return;
     }
     logEvent("assessment.load.ok", { status: 200 });
-    res.json({ assessment: result.package, score: scoreEnvelope(result.package) });
+    const assessment = {
+      ...result.package,
+      engagement: normalizeEngagement(result.package.engagement),
+    };
+    res.json({ assessment, score: scoreEnvelope(assessment) });
   });
 
   app.put("/api/assessment", (req, res) => {

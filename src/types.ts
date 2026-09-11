@@ -10,6 +10,29 @@ export type CmmcStatus =
   | "final-l2-self";
 export type Weight = 0 | 1 | 3 | 5;
 
+export type InformationType = "unknown" | "fci-only" | "cui" | "both";
+export type RequiredCmmcLevel = "undetermined" | "level-1-self" | "level-2-self";
+export type WorkingLevel = "level-1-self" | "level-2-self";
+export type EngagementPhase = "intake" | "l1-prep" | "l2-prep";
+
+export interface EngagementClauses {
+  far5220421: boolean | null;
+  dfars7012: boolean | null;
+  dfars7021: boolean | null;
+  notes: string;
+}
+
+/** Consultant engagement intake. Not a SPRS record. */
+export interface Engagement {
+  informationType: InformationType;
+  requiredLevel: RequiredCmmcLevel;
+  workingLevel: WorkingLevel;
+  clauses: EngagementClauses;
+  additionalCages: string[];
+  currentPhase: EngagementPhase;
+  intakeNotedAt: string | null;
+}
+
 export interface Organization {
   id: string;
   name: string;
@@ -194,6 +217,7 @@ export interface Assessment {
   standard: "NIST-SP-800-171-R2";
   catalogHash: string;
   organization: Organization;
+  engagement: Engagement;
   scope: Scope;
   assets: Asset[];
   flows: CuiFlow[];

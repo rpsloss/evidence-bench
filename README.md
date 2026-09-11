@@ -2,7 +2,7 @@
 
 **UNCLASSIFIED. Sample / fictional data only. Not a SPRS submission. Not a C3PAO tool. Not legal advice.**
 
-Local CMMC Level 2 (Self) assessment workbench for one prep cycle. **SPRS remains the system of record via human entry.** The seeded organization (**Harbor Precision**) is fictional. CAGE `XXXXX` is an obvious fake. The app never submits, signs, or affirms.
+Local Castleridge engagement kit for walking one fictional shop through **CMMC Level 1 (Self) then Level 2 (Self)**. **SPRS remains the system of record via human entry.** Intake decides FCI vs CUI before the 110-practice board. The Level 1 catalog (15 FAR 52.204-21 rows) is the next slice. The seeded organization (**Harbor Precision**) is fictional CUI → Level 2. CAGE `XXXXX` is an obvious fake. The app never submits, signs, or affirms.
 
 Castleridge Solutions is Hawaiʻi-based. This product stores **unclassified pointers only** — no CUI blobs, no multipart upload.
 
@@ -20,7 +20,7 @@ npm run dev
 
 Open [http://127.0.0.1:5173](http://127.0.0.1:5173). The API listens on **127.0.0.1:8787** (loopback only). CORS is limited to the Vite origin.
 
-Home shows an assembler board per NIST family: **unfinished / partial / gapped / present**. That is work status for the person compiling the pack, not a SPRS finding. The punch list under the board is the remaining work for the AO/SCA (unanswered objectives, MET missing pointers, NOT MET missing POA&M, evidence warnings). Export still refuses `sprs-manual-entry.csv` while any objective is unanswered. `POST /api/snapshot` always emits a SAMPLE zip with `HANDOFF.md` (cover sheet + punch list) for the AO/SCA, and omits the SPRS CSV.
+Home is an engagement board: information type, required CMMC Status, working level, and phase. Intake is first. The 14-family assembler board (**unfinished / partial / gapped / present**) is Level 2 tooling and stays parked while working Level 1. That completion status is not a SPRS finding. The punch list is remaining L2 work for the AO/SCA. Export still refuses `sprs-manual-entry.csv` while any L2 objective is unanswered. `POST /api/snapshot` always emits a SAMPLE zip with `HANDOFF.md` (cover sheet + punch list) for the AO/SCA, and omits the SPRS CSV. POA&M is disabled on Level 1 (32 CFR 170.21(a)(1)).
 
 CSV **header names stay frozen** (`cmmcId`, `reqId`, `mfaState`, …). `COLUMNS.md` in the zip is the plain-language glossary. The Export screen shows the same labels: CMMC practice ID, NIST 800-171 ID, finding to type.
 

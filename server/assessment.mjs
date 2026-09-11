@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import catalogFile from "../src/data/catalog.json" with { type: "json" };
 import catalogMeta from "../src/data/catalog.meta.json" with { type: "json" };
+import { normalizeEngagement } from "../src/lib/engagement.mjs";
 import { gatedPrepMarkedAt, normalizeFamilyReviews } from "../src/lib/familyReview.mjs";
 import { poamGuard } from "../src/lib/poamGuard.mjs";
 import { effectiveObjectives, storedFinding, guardNaWrite, filter171AAoIds } from "../src/lib/rollup.mjs";
@@ -238,6 +239,7 @@ export function validateAssessment(body) {
     standard: "NIST-SP-800-171-R2",
     catalogHash,
     organization: { ...org, fictional: true },
+    engagement: normalizeEngagement(raw.engagement),
     scope,
     assets: raw.assets,
     flows: raw.flows,

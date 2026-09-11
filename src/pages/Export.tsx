@@ -17,6 +17,7 @@ import {
   familyWorkCaption,
 } from "../lib/familyProgress.mjs";
 import { reportAssessmentAccess, useAssessment } from "../lib/store";
+import WorkingLevelNote from "../components/WorkingLevelNote";
 
 export default function ExportPage() {
   const { assessment, score, setAssessment, readOnly } = useAssessment();
@@ -100,6 +101,7 @@ export default function ExportPage() {
     <div>
       <div className="kicker">Export · SAMPLE</div>
       <h1>Export and affirmation checklist</h1>
+      <WorkingLevelNote />
       <p>
         {CHECKLIST_PREFIX} Markdown + CSV pack a human types into SPRS. There is no SPRS affirmation control and no
         submit. SAMPLE watermark is always on.

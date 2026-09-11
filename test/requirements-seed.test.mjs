@@ -98,7 +98,7 @@ describe("Harbor determination seed + Requirements gates", () => {
     assert.equal(envelope.score.max, 110);
     assert.equal(envelope.score.floor, -203);
     const src = fs.readFileSync(path.join(root, "server/index.mjs"), "utf8");
-    assert.match(src, /res\.json\(\{\s*assessment: result\.package,\s*score:/);
+    assert.match(src, /res\.json\(\{\s*assessment,\s*score:/);
     assert.equal(/app\.(get|post|put)\(\s*[`'"]\/api\/sprs/.test(src), false);
     assert.equal(/app\.(get|post|put)\(\s*[`'"]\/api\/affirm/.test(src), false);
   });
